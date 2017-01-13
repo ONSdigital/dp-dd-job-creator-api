@@ -7,7 +7,7 @@ import uk.co.onsdigital.discovery.model.DimensionalDataSet;
 import java.util.UUID;
 
 /**
- * Created by neil on 12/01/2017.
+ * Repository for looking up datasets.
  */
 @Repository
 public interface DataSetRepository extends JpaRepository<DimensionalDataSet, UUID> {

@@ -28,13 +28,15 @@ import uk.co.onsdigital.job.repository.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
 import uk.co.onsdigital.job.service.JobStatusChecker;
 
-import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
+import static java.time.Instant.now;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -74,10 +76,15 @@ public class JobController {
         final Map<FileFormat, FileStatus> statusMap = filterServiceClient.submitFilterRequest(dataSet,
                 request.getDimensions(), request.getFileFormats());
 
-        final Job job = Job.builder().status(Status.PENDING)
+        final Job job = Job.builder()
+                .id(UUID.randomUUID().toString())
+                .status(Status.PENDING)
                 .files(new ArrayList<>(statusMap.values()))
-                .expiryTime(Instant.now().plus(1, ChronoUnit.HOURS))
+                .expiryTime(new Date(now().plus(1, ChronoUnit.HOURS).toEpochMilli()))
                 .build();
+
+        // Check to see if the files already exist
+        jobStatusChecker.updateStatus(job);
 
         return jobRepository.save(job);
     }
@@ -88,10 +95,17 @@ public class JobController {
     @Transactional
     public Job checkJobStatus(final @PathVariable("id") String jobId) {
         log.debug("Checking status for: {}", jobId);
-        final Job job = jobRepository.findOne(jobId);
+        Job job = jobRepository.getOne(jobId);
         if (job == null) {
             throw new NoSuchJobException(jobId);
         }
+
+        if (job.getExpiryTime().before(new Date())) {
+            log.debug("Deleting expired job: {}", job);
+            jobRepository.delete(job);
+            throw new NoSuchJobException(jobId);
+        }
+
         jobStatusChecker.updateStatus(job);
         return job;
     }
@@ -99,7 +113,7 @@ public class JobController {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler({NullPointerException.class, IllegalArgumentException.class})
     public void onBadRequest(Exception e) {
-        log.error("Exception: {}", e);
+         log.debug("Exception: {}", e);
     }
 
     private static <T> List<T> concatLists(List<T> x, List<T> y) {

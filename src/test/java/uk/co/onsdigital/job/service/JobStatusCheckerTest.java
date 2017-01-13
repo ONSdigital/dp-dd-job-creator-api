@@ -10,11 +10,8 @@ import uk.co.onsdigital.job.model.FileStatus;
 import uk.co.onsdigital.job.model.Job;
 import uk.co.onsdigital.job.model.Status;
 
-import java.util.Arrays;
+import java.util.Date;
 
-import static java.time.Instant.now;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -36,7 +33,7 @@ public class JobStatusCheckerTest {
 
     @Test
     public void shouldNotDoAnythingIfJobIsComplete() {
-        Job job = Job.builder().files(emptyList()).status(Status.COMPLETE).expiryTime(now()).build();
+        Job job = Job.builder().id("x").status(Status.COMPLETE).expiryTime(now()).build();
         checker.updateStatus(job);
         verifyNoMoreInteractions(mockS3Client);
     }
@@ -44,7 +41,7 @@ public class JobStatusCheckerTest {
     @Test
     public void shouldLeaveJobPendingIfFilesNotAvailable() {
         FileStatus fileStatus = new FileStatus("test.csv");
-        Job job = Job.builder().files(singletonList(fileStatus)).status(Status.PENDING).expiryTime(now()).build();
+        Job job = Job.builder().id("x").file(fileStatus).status(Status.PENDING).expiryTime(now()).build();
 
         checker.updateStatus(job);
 
@@ -57,7 +54,7 @@ public class JobStatusCheckerTest {
     public void shouldMarkFileAsCompleteWhenAvailable() {
         FileStatus a = new FileStatus("a.csv");
         FileStatus b = new FileStatus("b.csv");
-        Job job = Job.builder().files(Arrays.asList(a, b)).status(Status.PENDING).expiryTime(now()).build();
+        Job job = Job.builder().id("x").file(a).file(b).status(Status.PENDING).expiryTime(now()).build();
         when(mockS3Client.doesObjectExist(BUCKET, "b.csv")).thenReturn(true);
 
         checker.updateStatus(job);
@@ -73,7 +70,7 @@ public class JobStatusCheckerTest {
     public void shouldMarkJobAsCompleteWhenAllFilesAvailable() {
         FileStatus a = new FileStatus("a.csv");
         FileStatus b = new FileStatus("b.csv");
-        Job job = Job.builder().files(Arrays.asList(a, b)).status(Status.PENDING).expiryTime(now()).build();
+        Job job = Job.builder().id("x").file(a).file(b).status(Status.PENDING).expiryTime(now()).build();
         when(mockS3Client.doesObjectExist(BUCKET, "b.csv")).thenReturn(true);
         when(mockS3Client.doesObjectExist(BUCKET, "a.csv")).thenReturn(true);
 
@@ -83,4 +80,6 @@ public class JobStatusCheckerTest {
         assertThat(b.isComplete()).isTrue();
         assertThat(job.isComplete()).isTrue();
     }
+
+    private static Date now() { return new Date(); }
 }

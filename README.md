@@ -39,10 +39,10 @@ POST to /job with payload:
 ```json
 { 
   "id" : "the dataset uuid",
-  "dimensions" : {
-      "NACE" : ["blah", "whatever"],
-      "Sex"  : ["Male"]
-  },
+  "dimensions" : [
+      { "id": "NACE", "options": ["blah", "whatever"] },
+      { "id": "Sex", "options": ["Male"] }
+  ],
   "fileFormats" : ["CSV"]
 }
 ```
