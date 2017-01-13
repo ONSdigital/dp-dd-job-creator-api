@@ -1,6 +1,6 @@
 package uk.co.onsdigital.job.service;
 
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,12 +18,12 @@ import uk.co.onsdigital.job.model.Status;
 public class JobStatusChecker {
     private static final Logger log = LoggerFactory.getLogger(JobStatusChecker.class);
 
-    private final AmazonS3Client s3Client;
+    private final AmazonS3 s3Client;
     private final String outputS3Bucket;
     private final UriTemplate downloadUrlTemplate;
 
     @Autowired
-    JobStatusChecker(final AmazonS3Client s3Client,
+    JobStatusChecker(final AmazonS3 s3Client,
                      final @Value("${output.s3.bucket}") String outputS3Bucket,
                      final @Value("${download.url.template}") UriTemplate downloadUrlTemplate) {
         log.info("Starting JobStatusChecker. s3.bucket={}, url.template={}", outputS3Bucket, downloadUrlTemplate);

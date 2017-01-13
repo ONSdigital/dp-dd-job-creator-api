@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Created by neil on 12/01/2017.
+ * Temporary repository for jobs as a quick effort to get things running.
  */
 @Service
 public class InMemoryJobRepository implements JobRepository {

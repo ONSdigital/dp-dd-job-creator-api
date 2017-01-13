@@ -15,7 +15,7 @@ import java.util.List;
 @Data @Builder
 public class Job {
     private String id;
-    private @NonNull Status status;
+    private @NonNull Status status = Status.PENDING;
     private @NonNull List<FileStatus> files = Collections.emptyList();
     private @JsonIgnore @NonNull Instant expiryTime;
 

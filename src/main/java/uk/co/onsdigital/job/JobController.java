@@ -38,7 +38,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Created by neil on 12/01/2017.
+ * REST API implementation.
  */
 @RestController
 public class JobController {

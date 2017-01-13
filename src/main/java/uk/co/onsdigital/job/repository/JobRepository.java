@@ -3,7 +3,7 @@ package uk.co.onsdigital.job.repository;
 import uk.co.onsdigital.job.model.Job;
 
 /**
- * Created by neil on 12/01/2017.
+ * Repository interface to hold jobs.
  */
 public interface JobRepository {
     Job save(Job job);
