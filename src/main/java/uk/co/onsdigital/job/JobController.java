@@ -1,6 +1,7 @@
 package uk.co.onsdigital.job;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,16 +29,17 @@ import uk.co.onsdigital.job.repository.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
 import uk.co.onsdigital.job.service.JobStatusChecker;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
-import java.util.List;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static java.time.Instant.now;
-import static java.util.stream.Collectors.toList;
 
 /**
  * REST API implementation.
@@ -45,6 +47,8 @@ import static java.util.stream.Collectors.toList;
 @RestController
 public class JobController {
     private static final Logger log = LoggerFactory.getLogger(JobController.class);
+
+    private static final Base64.Encoder filenameEncoder = Base64.getUrlEncoder().withoutPadding();
 
     private final DataSetRepository dataSetRepository;
     private final FilterServiceClient filterServiceClient;
@@ -73,18 +77,21 @@ public class JobController {
             throw new IllegalArgumentException("No such dataset");
         }
 
-        final Map<FileFormat, FileStatus> statusMap = filterServiceClient.submitFilterRequest(dataSet,
-                request.getDimensions(), request.getFileFormats());
+        final Map<FileFormat, FileStatus> files = generateFileNames(request);
 
         final Job job = Job.builder()
                 .id(UUID.randomUUID().toString())
                 .status(Status.PENDING)
-                .files(new ArrayList<>(statusMap.values()))
+                .files(files.values())
                 .expiryTime(new Date(now().plus(1, ChronoUnit.HOURS).toEpochMilli()))
                 .build();
 
         // Check to see if the files already exist
         jobStatusChecker.updateStatus(job);
+
+        if (!job.isComplete()) {
+            filterServiceClient.submitFilterRequest(dataSet, files, request.getSortedDimensionFilters());
+        }
 
         return jobRepository.save(job);
     }
@@ -116,8 +123,26 @@ public class JobController {
          log.debug("Exception: {}", e);
     }
 
-    private static <T> List<T> concatLists(List<T> x, List<T> y) {
-        return Stream.concat(x.stream(), y.stream()).collect(toList());
+    @VisibleForTesting
+    static Map<FileFormat, FileStatus> generateFileNames(final CreateJobRequest request) {
+        final String baseFileName = generateBaseFileName(request);
+        final Map<FileFormat, FileStatus> result = new EnumMap<>(FileFormat.class);
+        for (FileFormat format : request.getFileFormats()) {
+            result.put(format, new FileStatus(baseFileName + format.getExtension()));
+        }
+        return result;
     }
 
+    @VisibleForTesting
+    static String generateBaseFileName(final CreateJobRequest request) {
+        try {
+            final MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            sha256.update(request.getDataSetId().toString().getBytes(StandardCharsets.UTF_8));
+            sha256.update(request.getSortedDimensionFilters().toString().getBytes(StandardCharsets.UTF_8));
+            return filenameEncoder.encodeToString(sha256.digest());
+        } catch (NoSuchAlgorithmException e) {
+            log.warn("SHA-256 not available - falling back on random uuid");
+            return UUID.randomUUID().toString();
+        }
+    }
 }

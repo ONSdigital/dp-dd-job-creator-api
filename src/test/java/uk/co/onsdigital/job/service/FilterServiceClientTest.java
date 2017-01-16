@@ -1,6 +1,8 @@
 package uk.co.onsdigital.job.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedSet;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.mockito.ArgumentCaptor;
@@ -10,19 +12,15 @@ import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import uk.co.onsdigital.discovery.model.DimensionalDataSet;
-import uk.co.onsdigital.job.model.DimensionFilter;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatus;
-import uk.co.onsdigital.job.model.Status;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.util.Collections.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
@@ -30,7 +28,7 @@ import static org.mockito.Mockito.verify;
 public class FilterServiceClientTest {
     private static final String OUTPUT_BUCKET = "test-bucket";
     private static final String KAFKA_TOPIC = "test-topic";
-    private static final Pattern OUTPUT_URL_PATTERN = Pattern.compile("^s3://([^/]+)/(.*)$");
+    private static final Pattern OUTPUT_URL_PATTERN = Pattern.compile("^s3://test-bucket/(.*)$");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -50,8 +48,8 @@ public class FilterServiceClientTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void shouldRejectEmptyOutputFormats() {
-        filterServiceClient.submitFilterRequest(new DimensionalDataSet(),
-                singletonList(new DimensionFilter("test", singletonList("one"))), emptySet());
+        filterServiceClient.submitFilterRequest(new DimensionalDataSet(), Collections.emptyMap(),
+                Collections.singletonMap("test", Collections.singleton("a")));
     }
 
     @Test
@@ -60,12 +58,14 @@ public class FilterServiceClientTest {
         String inputUrl = "s3://test/foo.csv";
         DimensionalDataSet dataSet = new DimensionalDataSet();
         dataSet.setS3URL(inputUrl);
-        List<DimensionFilter> filters = Arrays.asList(new DimensionFilter("first", Arrays.asList("one", "two")),
-                new DimensionFilter("second", Arrays.asList("three", "four")));
-        Set<FileFormat> outputFormats = singleton(FileFormat.CSV);
+        Map<String, Set<String>> filters = ImmutableMap.<String, Set<String>>builder()
+                .put("first", ImmutableSortedSet.of("a", "b"))
+                .put("second", ImmutableSortedSet.of("c", "d"))
+                .build();
+        Map<FileFormat, FileStatus> files = Collections.singletonMap(FileFormat.CSV, new FileStatus("test.csv"));
 
         // When
-        Map<FileFormat, FileStatus> result = filterServiceClient.submitFilterRequest(dataSet, filters, outputFormats);
+        filterServiceClient.submitFilterRequest(dataSet, files, filters);
 
         // Then
         verify(mockKafkaProducer).send(recordArgumentCaptor.capture());
@@ -75,19 +75,9 @@ public class FilterServiceClientTest {
                 .containsEntry("inputUrl", inputUrl)
                 .containsKeys("outputUrl", "dimensions");
         assertThat((Map) request.get("dimensions"))
-                .containsEntry("first", Arrays.asList("one", "two"))
-                .containsEntry("second", Arrays.asList("four", "three")); // Will be sorted as a side-effect
-
-        final Matcher matcher = OUTPUT_URL_PATTERN.matcher(request.get("outputUrl").toString());
-        assertThat(matcher.matches()).isTrue();
-        final String bucket = matcher.group(1);
-        final String filename = matcher.group(2);
-        assertThat(bucket).isEqualTo(OUTPUT_BUCKET);
-
-        assertThat(result).containsEntry(FileFormat.CSV, new FileStatus(filename));
-        assertThat(result.get(FileFormat.CSV))
-                .hasFieldOrPropertyWithValue("status", Status.PENDING)
-                .hasFieldOrPropertyWithValue("url", null);
+                .containsEntry("first", Arrays.asList("a", "b"))
+                .containsEntry("second", Arrays.asList("c", "d"));
+        assertThat(request.get("outputUrl")).asString().matches(OUTPUT_URL_PATTERN);
 
     }
 }
