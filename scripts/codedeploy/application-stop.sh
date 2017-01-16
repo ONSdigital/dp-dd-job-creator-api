@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONTAINER_ID=$(docker ps | grep dp-dd-job-creator-api | awk '{print $1}')
+CONTAINER_ID=$(docker ps | grep dp-dd-job-creator-api$ | awk '{print $1}')
 
 if [[ -n $CONTAINER_ID ]]; then
   docker stop $CONTAINER_ID
