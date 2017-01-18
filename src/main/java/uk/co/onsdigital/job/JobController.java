@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import uk.co.onsdigital.discovery.model.DimensionalDataSet;
 import uk.co.onsdigital.job.exception.NoSuchJobException;
 import uk.co.onsdigital.job.model.CreateJobRequest;
 import uk.co.onsdigital.job.model.FileFormat;
@@ -72,11 +71,7 @@ public class JobController {
     @Transactional
     public Job createJob(final @RequestBody CreateJobRequest request) throws JsonProcessingException {
         log.debug("Processing job request: {}", request);
-        final DimensionalDataSet dataSet = dataSetRepository.findOne(request.getDataSetId());
-        if (dataSet == null) {
-            throw new IllegalArgumentException("No such dataset");
-        }
-
+        final String dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
         final Map<FileFormat, FileStatus> files = generateFileNames(request);
 
         final Job job = Job.builder()
@@ -90,7 +85,7 @@ public class JobController {
         jobStatusChecker.updateStatus(job);
 
         if (!job.isComplete()) {
-            filterServiceClient.submitFilterRequest(dataSet, files, request.getSortedDimensionFilters());
+            filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
         }
 
         return jobRepository.save(job);

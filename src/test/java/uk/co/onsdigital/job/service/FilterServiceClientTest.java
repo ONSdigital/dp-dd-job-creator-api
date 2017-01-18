@@ -11,7 +11,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import uk.co.onsdigital.discovery.model.DimensionalDataSet;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatus;
 
@@ -28,6 +27,7 @@ import static org.mockito.Mockito.verify;
 public class FilterServiceClientTest {
     private static final String OUTPUT_BUCKET = "test-bucket";
     private static final String KAFKA_TOPIC = "test-topic";
+    private static final String INPUT_S3_URL = "s3://test/test.csv";
     private static final Pattern OUTPUT_URL_PATTERN = Pattern.compile("^s3://test-bucket/(.*)$");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -48,16 +48,13 @@ public class FilterServiceClientTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void shouldRejectEmptyOutputFormats() {
-        filterServiceClient.submitFilterRequest(new DimensionalDataSet(), Collections.emptyMap(),
+        filterServiceClient.submitFilterRequest(INPUT_S3_URL, Collections.emptyMap(),
                 Collections.singletonMap("test", Collections.singleton("a")));
     }
 
     @Test
     public void shouldSendJobRequestsToKafkaTopic() throws Exception {
         // Given
-        String inputUrl = "s3://test/foo.csv";
-        DimensionalDataSet dataSet = new DimensionalDataSet();
-        dataSet.setS3URL(inputUrl);
         Map<String, Set<String>> filters = ImmutableMap.<String, Set<String>>builder()
                 .put("first", ImmutableSortedSet.of("a", "b"))
                 .put("second", ImmutableSortedSet.of("c", "d"))
@@ -65,14 +62,14 @@ public class FilterServiceClientTest {
         Map<FileFormat, FileStatus> files = Collections.singletonMap(FileFormat.CSV, new FileStatus("test.csv"));
 
         // When
-        filterServiceClient.submitFilterRequest(dataSet, files, filters);
+        filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, filters);
 
         // Then
         verify(mockKafkaProducer).send(recordArgumentCaptor.capture());
         assertThat(recordArgumentCaptor.getValue().topic()).isEqualTo(KAFKA_TOPIC);
         final Map<String, Object> request = objectMapper.readValue(recordArgumentCaptor.getValue().value(), Map.class);
         assertThat(request)
-                .containsEntry("inputUrl", inputUrl)
+                .containsEntry("inputUrl", INPUT_S3_URL)
                 .containsKeys("outputUrl", "dimensions");
         assertThat((Map) request.get("dimensions"))
                 .containsEntry("first", Arrays.asList("a", "b"))

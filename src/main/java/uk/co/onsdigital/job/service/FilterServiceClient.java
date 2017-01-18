@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import uk.co.onsdigital.discovery.model.DimensionalDataSet;
 import uk.co.onsdigital.job.exception.ServiceUnavailableException;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatus;
@@ -47,11 +46,11 @@ public class FilterServiceClient {
     /**
      * Submits a request to the CSV filter component to produce the given output formats.
      *
-     * @param dataSet       the dataset to filter.
+     * @param dataSetS3Url  the S3 URL of the dataset to filter.
      * @param files         the files to create.
      * @param filters       the set of dimension filters to apply.
      */
-    public void submitFilterRequest(final DimensionalDataSet dataSet, final Map<FileFormat, FileStatus> files,
+    public void submitFilterRequest(final String dataSetS3Url, final Map<FileFormat, FileStatus> files,
                                     final Map<String, ? extends Set<String>> filters) {
 
         if (files == null || files.isEmpty()) {
@@ -65,7 +64,7 @@ public class FilterServiceClient {
             }
 
             final FilterRequest filterRequest = FilterRequest.builder()
-                    .inputUrl(dataSet.getS3URL())
+                    .inputUrl(dataSetS3Url)
                     .outputUrl("s3://" + outputS3Bucket + "/" + file.getName())
                     .dimensions(filters)
                     .build();

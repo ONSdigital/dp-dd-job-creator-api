@@ -19,7 +19,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.vendor.AbstractJpaVendorAdapter;
 import org.springframework.orm.jpa.vendor.EclipseLinkJpaVendorAdapter;
 import org.springframework.transaction.jta.JtaTransactionManager;
-import uk.co.onsdigital.discovery.model.DimensionalDataSet;
 import uk.co.onsdigital.job.model.Job;
 import uk.co.onsdigital.job.repository.DataSetRepository;
 
@@ -32,7 +31,7 @@ import java.util.Properties;
  * Spring boot application configuration.
  */
 @SpringBootApplication
-@EntityScan(basePackageClasses = { DimensionalDataSet.class, Job.class })
+@EntityScan(basePackageClasses = { Job.class })
 @EnableJpaRepositories(basePackageClasses = DataSetRepository.class)
 public class Application extends JpaBaseConfiguration {
     private static final Logger log = LoggerFactory.getLogger(Application.class);
