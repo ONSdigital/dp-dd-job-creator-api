@@ -6,7 +6,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import uk.co.onsdigital.discovery.model.DimensionalDataSet;
+import uk.co.onsdigital.job.exception.NoSuchDataSetException;
 import uk.co.onsdigital.job.exception.NoSuchJobException;
 import uk.co.onsdigital.job.model.CreateJobRequest;
 import uk.co.onsdigital.job.model.DimensionFilter;
@@ -109,10 +109,10 @@ public class JobControllerTest {
         assertThat(result.get(FileFormat.CSV).getName()).isNotNull().endsWith(".csv");
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class)
+    @Test(expectedExceptions = NoSuchDataSetException.class)
     public void shouldRejectMissingDataSets() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
-        when(mockDataSetRepository.findOne(request.getDataSetId())).thenReturn(null);
+        when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenThrow(new NoSuchDataSetException(null));
 
         jobController.createJob(request);
     }
@@ -120,8 +120,7 @@ public class JobControllerTest {
     @Test
     public void shouldNotSubmitRequestIfFilesAlreadyExist() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
-        DimensionalDataSet dataSet = new DimensionalDataSet();
-        when(mockDataSetRepository.findOne(request.getDataSetId())).thenReturn(dataSet);
+        when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
         doAnswer(ctx -> {
             Job job = (Job)ctx.getArguments()[0];
             job.setStatus(Status.COMPLETE);
@@ -137,12 +136,12 @@ public class JobControllerTest {
     @Test
     public void shouldSubmitRequestToFilterIfFilesDoNotExist() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
-        DimensionalDataSet dataSet = new DimensionalDataSet();
-        when(mockDataSetRepository.findOne(request.getDataSetId())).thenReturn(dataSet);
+        String s3Url = "s3://test/test.csv";
+        when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn(s3Url);
 
         jobController.createJob(request);
 
-        verify(mockFilterServiceClient).submitFilterRequest(eq(dataSet), fileStatus.capture(),
+        verify(mockFilterServiceClient).submitFilterRequest(eq(s3Url), fileStatus.capture(),
                 eq(request.getSortedDimensionFilters()));
         assertThat(fileStatus.getValue()).containsOnlyKeys(FileFormat.CSV);
         assertThat(fileStatus.getValue().get(FileFormat.CSV).getStatus()).isEqualTo(Status.PENDING);
@@ -152,8 +151,7 @@ public class JobControllerTest {
     @Test
     public void shouldReturnJobStatusFromCreateRequest() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
-        DimensionalDataSet dataSet = new DimensionalDataSet();
-        when(mockDataSetRepository.findOne(request.getDataSetId())).thenReturn(dataSet);
+        when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
         when(mockJobRepository.save(any(Job.class))).thenAnswer(ctx -> ctx.getArguments()[0]);
 
         Job job = jobController.createJob(request);
