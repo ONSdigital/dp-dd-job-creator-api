@@ -16,7 +16,6 @@ node {
 
     stage('Image') {
         docker.withRegistry("https://${env.ECR_REPOSITORY_URI}", { ->
-            sh '$(aws ecr get-login)'
             docker.build('dp-dd-job-creator-api', '--no-cache --pull --rm .').push(revision)
         })
     }
