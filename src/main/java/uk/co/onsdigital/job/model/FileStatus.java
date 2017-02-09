@@ -15,7 +15,7 @@ import javax.persistence.Table;
 /**
  * Indicates the status of a particular output file in a job.
  */
-@Data @Entity @Table(name = "file_status")
+@Data @Entity @Table(name = "file_status", schema = "job_creator")
 public class FileStatus {
     @Id
     private @NonNull String name;

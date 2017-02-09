@@ -7,17 +7,7 @@ import lombok.NonNull;
 import lombok.Singular;
 import lombok.experimental.Tolerate;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
+import javax.persistence.*;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -25,7 +15,7 @@ import java.util.List;
 /**
  * Represents a file generation job that has been submitted.
  */
-@Entity @Table(name = "file_gen_job")
+@Entity @Table(name = "job", schema = "job_creator")
 @Data @Builder
 public class Job {
     @Id
@@ -36,6 +26,7 @@ public class Job {
     private @NonNull Status status = Status.PENDING;
 
     @OneToMany(cascade = {CascadeType.ALL}, fetch = FetchType.EAGER)
+    @JoinTable(name = "job_file_status", schema = "job_creator")
     private @NonNull @Singular  List<FileStatus> files = Collections.emptyList();
 
     @Temporal(TemporalType.TIMESTAMP)
