@@ -53,5 +53,6 @@ public class JobStatusChecker {
                 job.setStatus(Status.COMPLETE);
             }
         }
+        log.debug("Checked status of job: {}", job);
     }
 }
