@@ -20,6 +20,7 @@ source $CONFIG && docker run -d                      \
   --env=KAFKA_TOPIC=$KAFKA_TOPIC                     \
   --env=OUTPUT_S3_BUCKET=$OUTPUT_S3_BUCKET           \
   --env=SERVER_PORT=$SERVER_PORT                     \
+  --env=PENDING_JOB_LIMIT=$PENDING_JOB_LIMIT         \
   --name=dp-dd-job-creator-api                       \
   --net=$DOCKER_NETWORK                              \
   --restart=always                                   \

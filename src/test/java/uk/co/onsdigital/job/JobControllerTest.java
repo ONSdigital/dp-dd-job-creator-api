@@ -6,8 +6,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import uk.co.onsdigital.job.exception.NoSuchDataSetException;
-import uk.co.onsdigital.job.exception.NoSuchJobException;
+import uk.co.onsdigital.job.exception.*;
 import uk.co.onsdigital.job.model.CreateJobRequest;
 import uk.co.onsdigital.job.model.DimensionFilter;
 import uk.co.onsdigital.job.model.FileFormat;
@@ -31,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
+import static uk.co.onsdigital.job.model.Status.PENDING;
 
 public class JobControllerTest {
 
@@ -49,6 +49,8 @@ public class JobControllerTest {
     @Captor
     private ArgumentCaptor<Map<FileFormat, FileStatus>> fileStatus;
 
+    private long pendingJobLimit = 99;
+
     private JobController jobController;
 
     @BeforeMethod
@@ -56,7 +58,9 @@ public class JobControllerTest {
         MockitoAnnotations.initMocks(this);
 
         jobController = new JobController(mockDataSetRepository, mockFilterServiceClient, mockJobRepository,
-                mockJobStatusChecker);
+                mockJobStatusChecker, pendingJobLimit);
+
+        when(mockJobRepository.countJobsWithStatus(PENDING)).thenReturn(0L);
     }
 
     @Test
@@ -103,7 +107,7 @@ public class JobControllerTest {
         Map<FileFormat, FileStatus> result = JobController.generateFileNames(request);
 
         assertThat(result).containsOnlyKeys(FileFormat.CSV);
-        assertThat(result.get(FileFormat.CSV).getStatus()).isEqualTo(Status.PENDING);
+        assertThat(result.get(FileFormat.CSV).getStatus()).isEqualTo(PENDING);
         assertThat(result.get(FileFormat.CSV).isComplete()).isFalse();
         assertThat(result.get(FileFormat.CSV).getUrl()).isNull();
         assertThat(result.get(FileFormat.CSV).getName()).isNotNull().endsWith(".csv");
@@ -133,6 +137,43 @@ public class JobControllerTest {
         verify(mockJobRepository).save(any(Job.class));
     }
 
+    @Test(expectedExceptions = TooManyRequestsException.class)
+    public void shouldThrowExceptionWhenPendingLimitExceeded() throws Exception {
+        CreateJobRequest request = request(UUID.randomUUID());
+        when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
+        when(mockJobRepository.countJobsWithStatus(PENDING)).thenReturn(pendingJobLimit);
+        doAnswer(ctx -> {
+            Job job = (Job)ctx.getArguments()[0];
+            job.setStatus(PENDING);
+            return null;
+        }).when(mockJobStatusChecker).updateStatus(any(Job.class));
+
+        try {
+            jobController.createJob(request);
+        } finally {
+            verifyZeroInteractions(mockFilterServiceClient);
+            verify(mockJobRepository, never()).save(any(Job.class));
+        }
+
+    }
+
+    @Test
+    public void shouldReturnCompletedJobWhenPendingLimitExceeded() throws Exception {
+        CreateJobRequest request = request(UUID.randomUUID());
+        when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
+        when(mockJobRepository.countJobsWithStatus(PENDING)).thenReturn(pendingJobLimit);
+        doAnswer(ctx -> {
+            Job job = (Job)ctx.getArguments()[0];
+            job.setStatus(Status.COMPLETE);
+            return null;
+        }).when(mockJobStatusChecker).updateStatus(any(Job.class));
+
+        jobController.createJob(request);
+
+        verifyZeroInteractions(mockFilterServiceClient);
+        verify(mockJobRepository).save(any(Job.class));
+    }
+
     @Test
     public void shouldSubmitRequestToFilterIfFilesDoNotExist() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
@@ -144,7 +185,7 @@ public class JobControllerTest {
         verify(mockFilterServiceClient).submitFilterRequest(eq(s3Url), fileStatus.capture(),
                 eq(request.getSortedDimensionFilters()));
         assertThat(fileStatus.getValue()).containsOnlyKeys(FileFormat.CSV);
-        assertThat(fileStatus.getValue().get(FileFormat.CSV).getStatus()).isEqualTo(Status.PENDING);
+        assertThat(fileStatus.getValue().get(FileFormat.CSV).getStatus()).isEqualTo(PENDING);
         verify(mockJobRepository).save(any(Job.class));
     }
 
@@ -158,9 +199,9 @@ public class JobControllerTest {
 
         assertThat(job).isNotNull();
         assertThat(job.getId()).isNotEmpty();
-        assertThat(job.getStatus()).isEqualTo(Status.PENDING);
+        assertThat(job.getStatus()).isEqualTo(PENDING);
         assertThat(job.getExpiryTime()).isAfter(new Date());
-        assertThat(job.getFiles().get(0).getStatus()).isEqualTo(Status.PENDING);
+        assertThat(job.getFiles().get(0).getStatus()).isEqualTo(PENDING);
     }
 
     @Test(expectedExceptions = NoSuchJobException.class)
@@ -171,7 +212,7 @@ public class JobControllerTest {
     @Test
     public void shouldDeleteJobsThatHaveExpired() throws Exception {
         String jobId = "job1";
-        Job job = Job.builder().id(jobId).status(Status.PENDING).expiryTime(new Date(0L)).build();
+        Job job = Job.builder().id(jobId).status(PENDING).expiryTime(new Date(0L)).build();
         when(mockJobRepository.getOne(jobId)).thenReturn(job);
 
         try {
@@ -188,7 +229,7 @@ public class JobControllerTest {
     public void shouldCheckStatusForJobsThatArePending() throws Exception {
         String jobId = "job1";
         FileStatus file = new FileStatus("test.csv");
-        Job job = Job.builder().id(jobId).status(Status.PENDING).file(file).expiryTime(new Date(Long.MAX_VALUE)).build();
+        Job job = Job.builder().id(jobId).status(PENDING).file(file).expiryTime(new Date(Long.MAX_VALUE)).build();
         when(mockJobRepository.getOne(jobId)).thenReturn(job);
 
         Job result = jobController.checkJobStatus(jobId);

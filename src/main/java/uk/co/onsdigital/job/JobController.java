@@ -5,6 +5,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,11 +19,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import uk.co.onsdigital.job.exception.NoSuchJobException;
+import uk.co.onsdigital.job.exception.TooManyRequestsException;
 import uk.co.onsdigital.job.model.CreateJobRequest;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatus;
 import uk.co.onsdigital.job.model.Job;
-import uk.co.onsdigital.job.model.Status;
 import uk.co.onsdigital.job.repository.DataSetRepository;
 import uk.co.onsdigital.job.repository.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static java.time.Instant.now;
+import static uk.co.onsdigital.job.model.Status.PENDING;
 
 /**
  * REST API implementation.
@@ -53,14 +55,17 @@ public class JobController {
     private final FilterServiceClient filterServiceClient;
     private final JobRepository jobRepository;
     private final JobStatusChecker jobStatusChecker;
+    private final long pendingJobLimit;
 
     @Autowired
     JobController(DataSetRepository dataSetRepository, FilterServiceClient filterServiceClient,
-                  JobRepository jobRepository, JobStatusChecker jobStatusChecker) {
+                  JobRepository jobRepository, JobStatusChecker jobStatusChecker, @Value("${pending.job.limit}") long pendingJobLimit) {
         this.dataSetRepository = dataSetRepository;
         this.filterServiceClient = filterServiceClient;
         this.jobStatusChecker = jobStatusChecker;
         this.jobRepository = jobRepository;
+        this.pendingJobLimit = pendingJobLimit;
+        log.info("pendingJobLimit=" + pendingJobLimit);
     }
 
 
@@ -76,7 +81,7 @@ public class JobController {
 
         final Job job = Job.builder()
                 .id(UUID.randomUUID().toString())
-                .status(Status.PENDING)
+                .status(PENDING)
                 .files(files.values())
                 .expiryTime(new Date(now().plus(1, ChronoUnit.HOURS).toEpochMilli()))
                 .build();
@@ -84,10 +89,14 @@ public class JobController {
         // Check to see if the files already exist
         jobStatusChecker.updateStatus(job);
 
-        if (!job.isComplete()) {
-            filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
+        if (job.isComplete()) {
+            return jobRepository.save(job);
+        }
+        if (jobRepository.countJobsWithStatus(PENDING) >= pendingJobLimit) {
+            throw new TooManyRequestsException("Sorry - the number of requested jobs exceeds the limit");
         }
 
+        filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
         return jobRepository.save(job);
     }
 

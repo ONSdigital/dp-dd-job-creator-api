@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.vendor.AbstractJpaVendorAdapter;
 import org.springframework.orm.jpa.vendor.EclipseLinkJpaVendorAdapter;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.jta.JtaTransactionManager;
 import uk.co.onsdigital.job.model.Job;
 import uk.co.onsdigital.job.repository.DataSetRepository;
@@ -33,6 +34,7 @@ import java.util.Properties;
 @SpringBootApplication
 @EntityScan(basePackageClasses = { Job.class })
 @EnableJpaRepositories(basePackageClasses = DataSetRepository.class)
+@EnableScheduling
 public class Application extends JpaBaseConfiguration {
     private static final Logger log = LoggerFactory.getLogger(Application.class);
 
