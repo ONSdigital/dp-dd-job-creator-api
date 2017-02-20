@@ -121,6 +121,11 @@ public class JobController {
         return job;
     }
 
+    @GetMapping("/healthcheck")
+    public boolean healthCheck() {
+        return true;
+    }
+
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler({NullPointerException.class, IllegalArgumentException.class})
     public void onBadRequest(Exception e) {
