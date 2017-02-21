@@ -34,7 +34,7 @@ As per the stub, this offers two API calls:
 
 ### Create Job
 
-POST to /job with payload:
+POST to /jobDto with payload:
 
 ```json
 { 
@@ -62,14 +62,14 @@ You will receive back a response like:
 }
 ```
 
-### Check job status
+### Check job statusDto
 
 Take the `id` from the response you got when creating the job and perform a GET on `/job/{id}` to get a response like:
 
 ```json
 {
   "id": "3fdb1aed-123f-4258-b76b-5620190c7524",
-  "status": "Complete",
+  "statusDto": "Complete",
   "files": [
     {
       "name": "P_F5yHzPfwhiUnZzF498M9qX_ODpr_0O7DBogi96n4k.csv",

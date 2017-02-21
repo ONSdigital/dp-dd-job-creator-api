@@ -6,16 +6,18 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.web.util.UriTemplate;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import uk.co.onsdigital.job.model.FileStatus;
-import uk.co.onsdigital.job.model.Job;
-import uk.co.onsdigital.job.model.Status;
+import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.JobDto;
+import uk.co.onsdigital.job.model.StatusDto;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-public class JobStatusCheckerTest {
+public class JobDtoStatusCheckerTest {
     private static final String BUCKET = "test-bucket";
     private static final UriTemplate DOWNLOAD_URI = new UriTemplate("http://example.com/download/{filename}");
 
@@ -33,52 +35,67 @@ public class JobStatusCheckerTest {
 
     @Test
     public void shouldNotDoAnythingIfJobIsComplete() {
-        Job job = Job.builder().id("x").status(Status.COMPLETE).expiryTime(now()).build();
-        checker.updateStatus(job);
+        JobDto jobDto = new JobDto();
+        jobDto.setId("x");
+        jobDto.setStatus(StatusDto.COMPLETE);
+        jobDto.setExpiryTime(now());
+        checker.updateStatus(jobDto);
         verifyNoMoreInteractions(mockS3Client);
     }
 
     @Test
     public void shouldLeaveJobPendingIfFilesNotAvailable() {
-        FileStatus fileStatus = new FileStatus("test.csv");
-        Job job = Job.builder().id("x").file(fileStatus).status(Status.PENDING).expiryTime(now()).build();
+        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
+        JobDto jobDto = new JobDto();
+        jobDto.setId("x");
+        jobDto.setFiles(Collections.singletonList(fileStatusDto));
+        jobDto.setStatus(StatusDto.PENDING);
+        jobDto.setExpiryTime(now());
 
-        checker.updateStatus(job);
+        checker.updateStatus(jobDto);
 
         verify(mockS3Client).doesObjectExist(BUCKET, "test.csv");
-        assertThat(fileStatus.isComplete()).isFalse();
-        assertThat(job.isComplete()).isFalse();
+        assertThat(fileStatusDto.isComplete()).isFalse();
+        assertThat(jobDto.isComplete()).isFalse();
     }
 
     @Test
     public void shouldMarkFileAsCompleteWhenAvailable() {
-        FileStatus a = new FileStatus("a.csv");
-        FileStatus b = new FileStatus("b.csv");
-        Job job = Job.builder().id("x").file(a).file(b).status(Status.PENDING).expiryTime(now()).build();
+        FileStatusDto a = new FileStatusDto("a.csv");
+        FileStatusDto b = new FileStatusDto("b.csv");
+        JobDto jobDto = new JobDto();
+        jobDto.setId("x");
+        jobDto.setFiles(Arrays.asList(a, b));
+        jobDto.setStatus(StatusDto.PENDING);
+        jobDto.setExpiryTime(now());
         when(mockS3Client.doesObjectExist(BUCKET, "b.csv")).thenReturn(true);
 
-        checker.updateStatus(job);
+        checker.updateStatus(jobDto);
 
         assertThat(a.isComplete()).isFalse();
         assertThat(b.isComplete()).isTrue();
-        assertThat(job.isComplete()).isFalse();
+        assertThat(jobDto.isComplete()).isFalse();
 
         assertThat(b.getUrl()).isEqualTo(DOWNLOAD_URI.expand("b.csv").toString());
     }
 
     @Test
     public void shouldMarkJobAsCompleteWhenAllFilesAvailable() {
-        FileStatus a = new FileStatus("a.csv");
-        FileStatus b = new FileStatus("b.csv");
-        Job job = Job.builder().id("x").file(a).file(b).status(Status.PENDING).expiryTime(now()).build();
+        FileStatusDto a = new FileStatusDto("a.csv");
+        FileStatusDto b = new FileStatusDto("b.csv");
+        JobDto jobDto = new JobDto();
+        jobDto.setId("x");
+        jobDto.setFiles(Arrays.asList(a, b));
+        jobDto.setStatus(StatusDto.PENDING);
+        jobDto.setExpiryTime(now());
         when(mockS3Client.doesObjectExist(BUCKET, "b.csv")).thenReturn(true);
         when(mockS3Client.doesObjectExist(BUCKET, "a.csv")).thenReturn(true);
 
-        checker.updateStatus(job);
+        checker.updateStatus(jobDto);
 
         assertThat(a.isComplete()).isTrue();
         assertThat(b.isComplete()).isTrue();
-        assertThat(job.isComplete()).isTrue();
+        assertThat(jobDto.isComplete()).isTrue();
     }
 
     private static Date now() { return new Date(); }

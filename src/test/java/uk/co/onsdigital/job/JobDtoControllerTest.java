@@ -1,28 +1,17 @@
 package uk.co.onsdigital.job;
 
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.*;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import uk.co.onsdigital.job.exception.*;
-import uk.co.onsdigital.job.model.CreateJobRequest;
-import uk.co.onsdigital.job.model.DimensionFilter;
-import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatus;
-import uk.co.onsdigital.job.model.Job;
-import uk.co.onsdigital.job.model.Status;
-import uk.co.onsdigital.job.repository.DataSetRepository;
-import uk.co.onsdigital.job.repository.JobRepository;
+import uk.co.onsdigital.job.model.*;
+import uk.co.onsdigital.job.model.JobDto;
+import uk.co.onsdigital.job.persistence.DataSetRepository;
+import uk.co.onsdigital.job.persistence.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
 import uk.co.onsdigital.job.service.JobStatusChecker;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
@@ -30,9 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.onsdigital.job.model.Status.PENDING;
+import static uk.co.onsdigital.job.model.StatusDto.PENDING;
 
-public class JobControllerTest {
+public class JobDtoControllerTest {
 
     @Mock
     private DataSetRepository mockDataSetRepository;
@@ -47,7 +36,7 @@ public class JobControllerTest {
     private JobStatusChecker mockJobStatusChecker;
 
     @Captor
-    private ArgumentCaptor<Map<FileFormat, FileStatus>> fileStatus;
+    private ArgumentCaptor<Map<FileFormat, FileStatusDto>> fileStatus;
 
     private long pendingJobLimit = 99;
 
@@ -104,7 +93,7 @@ public class JobControllerTest {
     public void shouldCreatePendingInitialFileStatus() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
 
-        Map<FileFormat, FileStatus> result = JobController.generateFileNames(request);
+        Map<FileFormat, FileStatusDto> result = JobController.generateFileNames(request);
 
         assertThat(result).containsOnlyKeys(FileFormat.CSV);
         assertThat(result.get(FileFormat.CSV).getStatus()).isEqualTo(PENDING);
@@ -126,15 +115,15 @@ public class JobControllerTest {
         CreateJobRequest request = request(UUID.randomUUID());
         when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
         doAnswer(ctx -> {
-            Job job = (Job)ctx.getArguments()[0];
-            job.setStatus(Status.COMPLETE);
+            JobDto jobDto = (JobDto)ctx.getArguments()[0];
+            jobDto.setStatus(StatusDto.COMPLETE);
             return null;
-        }).when(mockJobStatusChecker).updateStatus(any(Job.class));
+        }).when(mockJobStatusChecker).updateStatus(any(JobDto.class));
 
         jobController.createJob(request);
 
         verifyZeroInteractions(mockFilterServiceClient);
-        verify(mockJobRepository).save(any(Job.class));
+        verify(mockJobRepository).save(any(JobDto.class));
     }
 
     @Test(expectedExceptions = TooManyRequestsException.class)
@@ -143,16 +132,16 @@ public class JobControllerTest {
         when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
         when(mockJobRepository.countJobsWithStatus(PENDING)).thenReturn(pendingJobLimit);
         doAnswer(ctx -> {
-            Job job = (Job)ctx.getArguments()[0];
-            job.setStatus(PENDING);
+            JobDto jobDto = (JobDto)ctx.getArguments()[0];
+            jobDto.setStatus(PENDING);
             return null;
-        }).when(mockJobStatusChecker).updateStatus(any(Job.class));
+        }).when(mockJobStatusChecker).updateStatus(any(JobDto.class));
 
         try {
             jobController.createJob(request);
         } finally {
             verifyZeroInteractions(mockFilterServiceClient);
-            verify(mockJobRepository, never()).save(any(Job.class));
+            verify(mockJobRepository, never()).save(any(JobDto.class));
         }
 
     }
@@ -163,15 +152,15 @@ public class JobControllerTest {
         when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
         when(mockJobRepository.countJobsWithStatus(PENDING)).thenReturn(pendingJobLimit);
         doAnswer(ctx -> {
-            Job job = (Job)ctx.getArguments()[0];
-            job.setStatus(Status.COMPLETE);
+            JobDto jobDto = (JobDto)ctx.getArguments()[0];
+            jobDto.setStatus(StatusDto.COMPLETE);
             return null;
-        }).when(mockJobStatusChecker).updateStatus(any(Job.class));
+        }).when(mockJobStatusChecker).updateStatus(any(JobDto.class));
 
         jobController.createJob(request);
 
         verifyZeroInteractions(mockFilterServiceClient);
-        verify(mockJobRepository).save(any(Job.class));
+        verify(mockJobRepository).save(any(JobDto.class));
     }
 
     @Test
@@ -186,22 +175,22 @@ public class JobControllerTest {
                 eq(request.getSortedDimensionFilters()));
         assertThat(fileStatus.getValue()).containsOnlyKeys(FileFormat.CSV);
         assertThat(fileStatus.getValue().get(FileFormat.CSV).getStatus()).isEqualTo(PENDING);
-        verify(mockJobRepository).save(any(Job.class));
+        verify(mockJobRepository).save(any(JobDto.class));
     }
 
     @Test
     public void shouldReturnJobStatusFromCreateRequest() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
         when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
-        when(mockJobRepository.save(any(Job.class))).thenAnswer(ctx -> ctx.getArguments()[0]);
+        Mockito.doNothing().when(mockJobRepository).save(any(JobDto.class));
 
-        Job job = jobController.createJob(request);
+        JobDto jobDto = jobController.createJob(request);
 
-        assertThat(job).isNotNull();
-        assertThat(job.getId()).isNotEmpty();
-        assertThat(job.getStatus()).isEqualTo(PENDING);
-        assertThat(job.getExpiryTime()).isAfter(new Date());
-        assertThat(job.getFiles().get(0).getStatus()).isEqualTo(PENDING);
+        assertThat(jobDto).isNotNull();
+        assertThat(jobDto.getId()).isNotEmpty();
+        assertThat(jobDto.getStatus()).isEqualTo(PENDING);
+        assertThat(jobDto.getExpiryTime()).isAfter(new Date());
+        assertThat(jobDto.getFiles().get(0).getStatus()).isEqualTo(PENDING);
     }
 
     @Test(expectedExceptions = NoSuchJobException.class)
@@ -212,30 +201,39 @@ public class JobControllerTest {
     @Test
     public void shouldDeleteJobsThatHaveExpired() throws Exception {
         String jobId = "job1";
-        Job job = Job.builder().id(jobId).status(PENDING).expiryTime(new Date(0L)).build();
-        when(mockJobRepository.getOne(jobId)).thenReturn(job);
+        JobDto jobDto = new JobDto();
+        jobDto.setId(jobId);
+        jobDto.setStatus(PENDING);
+        jobDto.setExpiryTime(new Date(0L));
+        when(mockJobRepository.findOne(jobId)).thenReturn(jobDto);
 
         try {
             jobController.checkJobStatus(jobId);
-            fail("Expected exception for expired job");
+            fail("Expected exception for expired jobDto");
         } catch (NoSuchJobException ex) {
             // Expected
         }
 
-        verify(mockJobRepository).delete(job);
+        verify(mockJobRepository).delete(jobDto.getId());
     }
 
     @Test
     public void shouldCheckStatusForJobsThatArePending() throws Exception {
         String jobId = "job1";
-        FileStatus file = new FileStatus("test.csv");
-        Job job = Job.builder().id(jobId).status(PENDING).file(file).expiryTime(new Date(Long.MAX_VALUE)).build();
-        when(mockJobRepository.getOne(jobId)).thenReturn(job);
+        List<FileStatusDto> files = new LinkedList<FileStatusDto>();
+        FileStatusDto file = new FileStatusDto("test.csv");
+        files.add(file);
+        JobDto jobDto = new JobDto();
+        jobDto.setId(jobId);
+        jobDto.setStatus(PENDING);
+        jobDto.setExpiryTime(new Date(Long.MAX_VALUE));
+        jobDto.setFiles(files);
+        when(mockJobRepository.findOne(jobId)).thenReturn(jobDto);
 
-        Job result = jobController.checkJobStatus(jobId);
+        JobDto result = jobController.checkJobStatus(jobId);
 
-        verify(mockJobStatusChecker).updateStatus(job);
-        assertThat(result).isEqualTo(job);
+        verify(mockJobStatusChecker).updateStatus(jobDto);
+        assertThat(result).isEqualTo(jobDto);
     }
 
     private static CreateJobRequest request(UUID dataSetId) {

@@ -7,42 +7,36 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.autoconfigure.orm.jpa.JpaBaseConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.orm.jpa.vendor.AbstractJpaVendorAdapter;
-import org.springframework.orm.jpa.vendor.EclipseLinkJpaVendorAdapter;
+import org.springframework.context.annotation.Primary;
+import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.transaction.jta.JtaTransactionManager;
-import uk.co.onsdigital.job.model.Job;
-import uk.co.onsdigital.job.repository.DataSetRepository;
+import org.springframework.transaction.PlatformTransactionManager;
 
-import javax.sql.DataSource;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+
+import static java.util.Arrays.asList;
 
 /**
  * Spring boot application configuration.
  */
 @SpringBootApplication
-@EntityScan(basePackageClasses = { Job.class })
-@EnableJpaRepositories(basePackageClasses = DataSetRepository.class)
 @EnableScheduling
-public class Application extends JpaBaseConfiguration {
+@EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class,HibernateJpaAutoConfiguration.class})
+public class Application  {
     private static final Logger log = LoggerFactory.getLogger(Application.class);
-
-    protected Application(DataSource dataSource, JpaProperties properties,
-                            ObjectProvider<JtaTransactionManager> jtaTransactionManagerProvider) {
-        super(dataSource, properties, jtaTransactionManagerProvider);
-    }
-
 
     public static void main(String... args) {
         SpringApplication.run(Application.class, args);
@@ -66,13 +60,30 @@ public class Application extends JpaBaseConfiguration {
         return client;
     }
 
-    @Override
-    protected AbstractJpaVendorAdapter createJpaVendorAdapter() {
-        return new EclipseLinkJpaVendorAdapter();
+    @Bean
+    public EntityManagerFactory getEntityManagerFactory() {
+        final Map<String, String> env = new HashMap<>();
+        for (String property : asList("url", "driver", "user", "password")) {
+            String value = System.getenv("DB_" + property.toUpperCase());
+            if (value != null) {
+                env.put("javax.persistence.jdbc." + property, value);
+                if (property.equals("password")) {
+                    value = "*****";
+                }
+                log.info("Database config from environment: {} = {}", property, value);
+            }
+        }
+
+        return Persistence.createEntityManagerFactory("data_discovery", env);
     }
 
-    @Override
-    protected Map<String, Object> getVendorProperties() {
-        return new HashMap<>();
+    @Bean @Primary
+    public EntityManager getEntityManager(final EntityManagerFactory emf) {
+        return emf.createEntityManager();
+    }
+
+    @Bean
+    public PlatformTransactionManager getTransactionManager(final EntityManagerFactory emf) {
+        return new JpaTransactionManager(emf);
     }
 }

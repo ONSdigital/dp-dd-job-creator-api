@@ -1,9 +1,10 @@
 package uk.co.onsdigital.job.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import uk.co.onsdigital.job.repository.JobRepository;
+import uk.co.onsdigital.job.persistence.JobRepository;
 
 import java.util.Date;
 

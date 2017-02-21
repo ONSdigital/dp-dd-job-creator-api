@@ -7,9 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriTemplate;
-import uk.co.onsdigital.job.model.FileStatus;
-import uk.co.onsdigital.job.model.Job;
-import uk.co.onsdigital.job.model.Status;
+import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.JobDto;
+import uk.co.onsdigital.job.model.StatusDto;
 
 /**
  * Service for checking the status of file creation jobs.
@@ -34,25 +34,25 @@ public class JobStatusChecker {
     }
 
     /**
-     * Updates the status of the given job by polling S3 to see if the output files have been created.
+     * Updates the status of the given jobDto by polling S3 to see if the output files have been created.
      *
-     * @param job the job to check and update the status of.
+     * @param jobDto the jobDto to check and update the status of.
      */
-    public void updateStatus(Job job) {
-        log.debug("Checking status of job: {}", job);
-        if (!job.isComplete()) {
-            for (FileStatus fileStatus : job.getFiles()) {
-                if (!fileStatus.isComplete()) {
-                    if (s3Client.doesObjectExist(outputS3Bucket, fileStatus.getName())) {
-                        fileStatus.setStatus(Status.COMPLETE);
-                        fileStatus.setUrl(downloadUrlTemplate.expand(fileStatus.getName()).toString());
+    public void updateStatus(JobDto jobDto) {
+        log.debug("Checking status of jobDto: {}", jobDto);
+        if (!jobDto.isComplete()) {
+            for (FileStatusDto fileStatusDto : jobDto.getFiles()) {
+                if (!fileStatusDto.isComplete()) {
+                    if (s3Client.doesObjectExist(outputS3Bucket, fileStatusDto.getName())) {
+                        fileStatusDto.setStatus(StatusDto.COMPLETE);
+                        fileStatusDto.setUrl(downloadUrlTemplate.expand(fileStatusDto.getName()).toString());
                     }
                 }
             }
-            if (job.getFiles().stream().allMatch(FileStatus::isComplete)) {
-                job.setStatus(Status.COMPLETE);
+            if (jobDto.getFiles().stream().allMatch(FileStatusDto::isComplete)) {
+                jobDto.setStatus(StatusDto.COMPLETE);
             }
         }
-        log.debug("Checked status of job: {}", job);
+        log.debug("Checked status of jobDto: {}", jobDto);
     }
 }
