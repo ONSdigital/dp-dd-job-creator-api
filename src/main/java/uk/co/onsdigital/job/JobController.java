@@ -1,7 +1,9 @@
 package uk.co.onsdigital.job;
 
+import com.amazonaws.services.apigateway.model.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
+import javassist.tools.web.BadHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,38 +11,31 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import uk.co.onsdigital.job.exception.NoSuchDataSetException;
 import uk.co.onsdigital.job.exception.NoSuchJobException;
 import uk.co.onsdigital.job.exception.TooManyRequestsException;
 import uk.co.onsdigital.job.model.CreateJobRequest;
 import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatus;
-import uk.co.onsdigital.job.model.Job;
-import uk.co.onsdigital.job.repository.DataSetRepository;
-import uk.co.onsdigital.job.repository.JobRepository;
+import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.JobDto;
+import uk.co.onsdigital.job.persistence.DataSetRepository;
+import uk.co.onsdigital.job.persistence.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
 import uk.co.onsdigital.job.service.JobStatusChecker;
 
+import javax.persistence.NoResultException;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.time.Instant.now;
-import static uk.co.onsdigital.job.model.Status.PENDING;
+import static uk.co.onsdigital.job.model.StatusDto.PENDING;
 
 /**
  * REST API implementation.
@@ -74,51 +69,62 @@ public class JobController {
     @ResponseBody
     @CrossOrigin
     @Transactional
-    public Job createJob(final @RequestBody CreateJobRequest request) throws JsonProcessingException {
-        log.debug("Processing job request: {}", request);
-        final String dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
-        final Map<FileFormat, FileStatus> files = generateFileNames(request);
+    public JobDto createJob(final @RequestBody CreateJobRequest request) throws JsonProcessingException {
+        log.debug("Processing jobDto request: {}", request);
+        final String dataSetS3Url;
+        dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
+        final Map<FileFormat, FileStatusDto> files = generateFileNames(request);
 
-        final Job job = Job.builder()
-                .id(UUID.randomUUID().toString())
-                .status(PENDING)
-                .files(files.values())
-                .expiryTime(new Date(now().plus(1, ChronoUnit.HOURS).toEpochMilli()))
-                .build();
-
+        final JobDto jobDto = new JobDto();
+        jobDto.setId(UUID.randomUUID().toString());
+        jobDto.setStatus(PENDING);
+        jobDto.setFiles(files.values().stream().collect(Collectors.toList()));
+        jobDto.setExpiryTime(new Date(now().plus(1, ChronoUnit.HOURS).toEpochMilli()));
         // Check to see if the files already exist
-        jobStatusChecker.updateStatus(job);
+        jobStatusChecker.updateStatus(jobDto);
 
-        if (job.isComplete()) {
-            return jobRepository.save(job);
+        if (jobDto.isComplete()) {
+            jobRepository.save(jobDto);
+            return jobDto;
         }
         if (jobRepository.countJobsWithStatus(PENDING) >= pendingJobLimit) {
             throw new TooManyRequestsException("Sorry - the number of requested jobs exceeds the limit");
         }
-
         filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
-        return jobRepository.save(job);
+        jobRepository.save(jobDto);
+        return jobDto;
+    }
+
+    @ExceptionHandler
+    void handleNoSuchDataSetException(NoSuchDataSetException e, HttpServletResponse response) throws IOException {
+        log.error(e.getMessage());
+        response.sendError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
     }
 
     @GetMapping("/job/{id}")
     @ResponseBody
     @CrossOrigin
     @Transactional
-    public Job checkJobStatus(final @PathVariable("id") String jobId) {
+    public JobDto checkJobStatus(final @PathVariable("id") String jobId) {
         log.debug("Checking status for: {}", jobId);
-        Job job = jobRepository.getOne(jobId);
-        if (job == null) {
+        JobDto jobDto = jobRepository.findOne(jobId);
+        if (jobDto == null) {
             throw new NoSuchJobException(jobId);
         }
 
-        if (job.getExpiryTime().before(new Date())) {
-            log.debug("Deleting expired job: {}", job);
-            jobRepository.delete(job);
+        if (jobDto.getExpiryTime().before(new Date())) {
+            log.debug("Deleting expired jobDto: {}", jobDto);
+            jobRepository.delete(jobDto.getId());
             throw new NoSuchJobException(jobId);
         }
 
-        jobStatusChecker.updateStatus(job);
-        return job;
+        jobStatusChecker.updateStatus(jobDto);
+        return jobDto;
+    }
+
+    @GetMapping("/healthcheck")
+    public boolean healthCheck() {
+        return true;
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -128,11 +134,11 @@ public class JobController {
     }
 
     @VisibleForTesting
-    static Map<FileFormat, FileStatus> generateFileNames(final CreateJobRequest request) {
+    static Map<FileFormat, FileStatusDto> generateFileNames(final CreateJobRequest request) {
         final String baseFileName = generateBaseFileName(request);
-        final Map<FileFormat, FileStatus> result = new EnumMap<>(FileFormat.class);
+        final Map<FileFormat, FileStatusDto> result = new EnumMap<>(FileFormat.class);
         for (FileFormat format : request.getFileFormats()) {
-            result.put(format, new FileStatus(baseFileName + format.getExtension()));
+            result.put(format, new FileStatusDto(baseFileName + format.getExtension()));
         }
         return result;
     }
