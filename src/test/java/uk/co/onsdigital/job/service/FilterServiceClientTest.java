@@ -12,7 +12,7 @@ import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatus;
+import uk.co.onsdigital.job.model.FileStatusDto;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,7 +59,7 @@ public class FilterServiceClientTest {
                 .put("first", ImmutableSortedSet.of("a", "b"))
                 .put("second", ImmutableSortedSet.of("c", "d"))
                 .build();
-        Map<FileFormat, FileStatus> files = Collections.singletonMap(FileFormat.CSV, new FileStatus("test.csv"));
+        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, new FileStatusDto("test.csv"));
 
         // When
         filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, filters);

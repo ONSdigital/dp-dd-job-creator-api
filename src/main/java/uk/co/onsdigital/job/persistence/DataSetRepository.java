@@ -1,21 +1,28 @@
-package uk.co.onsdigital.job.repository;
+package uk.co.onsdigital.job.persistence;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
+import uk.co.onsdigital.discovery.model.DimensionalDataSet;
 import uk.co.onsdigital.job.exception.NoSuchDataSetException;
 
+import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import java.util.UUID;
 
 /**
  * Repository for looking up datasets.
  */
-@Repository
+@Component
 public class DataSetRepository {
 
+    private final EntityManager entityManager;
+
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    public DataSetRepository(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
 
     /**
      * Looks up the S3 URL for the given dataset.
@@ -26,9 +33,9 @@ public class DataSetRepository {
      */
     public String findS3urlForDataSet(UUID dataSetId) {
         try {
-            return jdbcTemplate.queryForObject("SELECT ds.s3_url FROM dimensional_data_set ds WHERE ds.dimensional_data_set_id = ?",
-                    String.class, dataSetId);
-        } catch (EmptyResultDataAccessException e) {
+            return entityManager.createNamedQuery(DimensionalDataSet.FIND_BY_ID, DimensionalDataSet.class)
+                    .setParameter(DimensionalDataSet.ID_PARAM, dataSetId).getSingleResult().getS3URL();
+        } catch (NoResultException e) {
             throw new NoSuchDataSetException(dataSetId);
         }
     }

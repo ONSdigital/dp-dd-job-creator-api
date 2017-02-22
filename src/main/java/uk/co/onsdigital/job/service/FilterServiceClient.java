@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import uk.co.onsdigital.job.exception.ServiceUnavailableException;
 import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatus;
+import uk.co.onsdigital.job.model.FileStatusDto;
 import uk.co.onsdigital.job.model.FilterRequest;
 
 import java.io.IOException;
@@ -50,14 +50,14 @@ public class FilterServiceClient {
      * @param files         the files to create.
      * @param filters       the set of dimension filters to apply.
      */
-    public void submitFilterRequest(final String dataSetS3Url, final Map<FileFormat, FileStatus> files,
+    public void submitFilterRequest(final String dataSetS3Url, final Map<FileFormat, FileStatusDto> files,
                                     final Map<String, ? extends Set<String>> filters) {
 
         if (files == null || files.isEmpty()) {
             throw new IllegalArgumentException("No files specified");
         }
 
-        for (FileStatus file : files.values()) {
+        for (FileStatusDto file : files.values()) {
             if (file.isComplete()) {
                 log.debug("Skipping file - already exists: {}", file);
                 continue;
