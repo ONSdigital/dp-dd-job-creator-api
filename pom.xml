@@ -31,11 +31,18 @@
         </plugins>
     </build>
 
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
-            <groupId>uk.co.onsdigital.discovery</groupId>
-            <artifactId>dd-model</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <groupId>com.github.ONSdigital</groupId>
+            <artifactId>dp-dd-backend-model</artifactId>
+            <version>develop-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
