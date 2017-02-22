@@ -1,13 +1,11 @@
 package uk.co.onsdigital.job.persistence;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
-import uk.co.onsdigital.discovery.model.DimensionalDataSet;
+import uk.co.onsdigital.discovery.model.*;
 import uk.co.onsdigital.job.exception.NoSuchDataSetException;
 
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
+import javax.persistence.*;
 import java.util.UUID;
 
 /**
@@ -33,8 +31,7 @@ public class DataSetRepository {
      */
     public String findS3urlForDataSet(UUID dataSetId) {
         try {
-            return entityManager.createNamedQuery(DimensionalDataSet.FIND_BY_ID, DimensionalDataSet.class)
-                    .setParameter(DimensionalDataSet.ID_PARAM, dataSetId).getSingleResult().getS3URL();
+            return entityManager.find(DimensionalDataSet.class, dataSetId).getS3URL();
         } catch (NoResultException e) {
             throw new NoSuchDataSetException(dataSetId);
         }
