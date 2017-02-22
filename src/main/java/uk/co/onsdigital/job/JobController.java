@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +68,6 @@ public class JobController {
         final String dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
         final Map<FileFormat, FileStatusDto> files = generateFileNames(request);
 
-
         final JobDto jobDto = new JobDto();
         jobDto.setId(UUID.randomUUID().toString());
         jobDto.setStatus(PENDING);
@@ -85,7 +83,6 @@ public class JobController {
         if (jobRepository.countJobsWithStatus(PENDING) >= pendingJobLimit) {
             throw new TooManyRequestsException("Sorry - the number of requested jobs exceeds the limit");
         }
-
         filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
         jobRepository.save(jobDto);
         return jobDto;

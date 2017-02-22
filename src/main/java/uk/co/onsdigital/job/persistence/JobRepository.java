@@ -1,21 +1,21 @@
 package uk.co.onsdigital.job.persistence;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 import uk.co.onsdigital.discovery.model.Job;
-import uk.co.onsdigital.discovery.model.Status;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
+import javax.persistence.PersistenceContext;
 import java.util.Date;
 
-@Repository
-@EntityScan("uk.co.onsdigital.discovery.model")
+
+@Component
 public class JobRepository {
 
+    @PersistenceContext
     private final EntityManager entityManager;
 
     @Autowired

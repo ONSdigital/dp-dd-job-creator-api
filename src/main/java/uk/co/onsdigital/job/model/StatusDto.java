@@ -2,7 +2,6 @@ package uk.co.onsdigital.job.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.sun.xml.internal.ws.api.message.Packet;
 import uk.co.onsdigital.discovery.model.Status;
 
 import java.util.Locale;
