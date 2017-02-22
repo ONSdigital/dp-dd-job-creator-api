@@ -1,0 +1,19 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: onsdigital/dp-concourse-tools-git
+
+inputs:
+  - name: build-bundle
+  - name: dp-dd-job-creator-api
+
+outputs:
+  - name: build
+  - name: target
+
+run:
+  path: dp-dd-job-creator-api/ci/scripts/unpack.sh
