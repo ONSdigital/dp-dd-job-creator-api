@@ -15,8 +15,8 @@ import uk.co.onsdigital.discovery.model.Status;
 public class FileStatusDto {
     private  String name;
 
-    private @NonNull
-    StatusDto status = StatusDto.PENDING;
+    @NonNull
+    private StatusDto status = StatusDto.PENDING;
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String url;

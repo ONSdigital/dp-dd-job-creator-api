@@ -22,7 +22,8 @@ public class JobDto {
 
     private  List<FileStatusDto> files = Collections.emptyList();
 
-    private @JsonIgnore Date expiryTime;
+    @JsonIgnore
+    private Date expiryTime;
 
     public JobDto () {
 
