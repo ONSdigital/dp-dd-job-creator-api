@@ -1,7 +1,9 @@
 package uk.co.onsdigital.job;
 
+import com.amazonaws.services.apigateway.model.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
+import javassist.tools.web.BadHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import uk.co.onsdigital.job.exception.NoSuchDataSetException;
 import uk.co.onsdigital.job.exception.NoSuchJobException;
 import uk.co.onsdigital.job.exception.TooManyRequestsException;
 import uk.co.onsdigital.job.model.CreateJobRequest;
@@ -21,6 +24,9 @@ import uk.co.onsdigital.job.persistence.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
 import uk.co.onsdigital.job.service.JobStatusChecker;
 
+import javax.persistence.NoResultException;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -65,7 +71,8 @@ public class JobController {
     @Transactional
     public JobDto createJob(final @RequestBody CreateJobRequest request) throws JsonProcessingException {
         log.debug("Processing jobDto request: {}", request);
-        final String dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
+        final String dataSetS3Url;
+        dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
         final Map<FileFormat, FileStatusDto> files = generateFileNames(request);
 
         final JobDto jobDto = new JobDto();
@@ -86,6 +93,12 @@ public class JobController {
         filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
         jobRepository.save(jobDto);
         return jobDto;
+    }
+
+    @ExceptionHandler
+    void handleNoSuchDataSetException(NoSuchDataSetException e, HttpServletResponse response) throws IOException {
+        log.error(e.getMessage());
+        response.sendError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
     }
 
     @GetMapping("/job/{id}")
