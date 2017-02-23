@@ -37,8 +37,8 @@
             <property name="javax.persistence.jdbc.user" value="job_creator" />
             <property name="javax.persistence.jdbc.password" value="password" />
             <property name="eclipselink.logging.level" value="INFO"/>
-            <!--<property name="eclipselink.logging.level.sql" value="FINE"/>-->
-            <!--<property name="eclipselink.logging.parameters" value="true"/>-->
+            <property name="eclipselink.logging.level.sql" value="FINE"/>
+            <property name="eclipselink.logging.parameters" value="true"/>
         </properties>
     </persistence-unit>
 </persistence>

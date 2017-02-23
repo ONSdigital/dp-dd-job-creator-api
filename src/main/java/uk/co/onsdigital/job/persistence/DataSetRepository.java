@@ -31,7 +31,9 @@ public class DataSetRepository {
      */
     public String findS3urlForDataSet(UUID dataSetId) {
         try {
-            return entityManager.find(DimensionalDataSet.class, dataSetId).getS3URL();
+            return entityManager.createNamedQuery(DimensionalDataSet.LOOKUP_S3_URL, String.class)
+                    .setParameter(DimensionalDataSet.ID_PARAM, dataSetId)
+                    .getSingleResult();
         } catch (NoResultException e) {
             throw new NoSuchDataSetException(dataSetId);
         }
