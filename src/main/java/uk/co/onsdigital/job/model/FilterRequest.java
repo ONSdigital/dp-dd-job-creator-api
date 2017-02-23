@@ -12,6 +12,7 @@ import java.util.Set;
  */
 @Data @Builder
 public class FilterRequest {
+    private @NonNull String requestId;
     private @NonNull String inputUrl;
     private @NonNull String outputUrl;
     private @NonNull Map<String, ? extends Set<String>> dimensions;

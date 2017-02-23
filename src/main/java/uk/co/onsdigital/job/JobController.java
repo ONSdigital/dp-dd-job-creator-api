@@ -1,9 +1,7 @@
 package uk.co.onsdigital.job;
 
-import com.amazonaws.services.apigateway.model.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
-import javassist.tools.web.BadHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,19 +10,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import uk.co.onsdigital.job.exception.NoSuchDataSetException;
-import uk.co.onsdigital.job.exception.NoSuchJobException;
-import uk.co.onsdigital.job.exception.TooManyRequestsException;
-import uk.co.onsdigital.job.model.CreateJobRequest;
-import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatusDto;
-import uk.co.onsdigital.job.model.JobDto;
+import uk.co.onsdigital.job.exception.*;
+import uk.co.onsdigital.job.model.*;
 import uk.co.onsdigital.job.persistence.DataSetRepository;
 import uk.co.onsdigital.job.persistence.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
 import uk.co.onsdigital.job.service.JobStatusChecker;
 
-import javax.persistence.NoResultException;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -95,10 +87,16 @@ public class JobController {
         return jobDto;
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(NoSuchDataSetException.class)
     void handleNoSuchDataSetException(NoSuchDataSetException e, HttpServletResponse response) throws IOException {
         log.error(e.getMessage());
         response.sendError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    void handleRuntimeException(RuntimeException e, HttpServletResponse response) throws IOException {
+        log.error("Unexpected RuntimeException!", e);
+        response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
     }
 
     @GetMapping("/job/{id}")
