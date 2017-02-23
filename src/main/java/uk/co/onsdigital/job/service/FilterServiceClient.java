@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import uk.co.onsdigital.job.exception.ServiceUnavailableException;
+import uk.co.onsdigital.logging.RequestIdProvider;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatusDto;
 import uk.co.onsdigital.job.model.FilterRequest;
@@ -28,11 +29,13 @@ public class FilterServiceClient {
     private final ObjectMapper jsonObjectMapper;
     private final String outputS3Bucket;
     private final String kafkaTopic;
+    private final RequestIdProvider requestIdProvider;
 
 
     @Autowired
     FilterServiceClient(final KafkaProducer<String, String> kafkaProducer,
                         final ObjectMapper jsonObjectMapper,
+                        final RequestIdProvider requestIdProvider,
                         final @Value("${output.s3.bucket}") String outputS3Bucket,
                         final @Value("${kafka.topic}") String kafkaTopic) {
         log.info("Starting FilterServiceClient. kafka.topic={}, output.s3.bucket={}", kafkaTopic, outputS3Bucket);
@@ -41,6 +44,7 @@ public class FilterServiceClient {
         this.jsonObjectMapper = jsonObjectMapper;
         this.outputS3Bucket = outputS3Bucket;
         this.kafkaTopic = kafkaTopic;
+        this.requestIdProvider = requestIdProvider;
     }
 
     /**
@@ -64,6 +68,7 @@ public class FilterServiceClient {
             }
 
             final FilterRequest filterRequest = FilterRequest.builder()
+                    .requestId(requestIdProvider.getId())
                     .inputUrl(dataSetS3Url)
                     .outputUrl("s3://" + outputS3Bucket + "/" + file.getName())
                     .dimensions(filters)

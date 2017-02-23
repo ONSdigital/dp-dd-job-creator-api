@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import uk.co.onsdigital.logging.RequestIdProvider;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatusDto;
 
@@ -22,6 +23,7 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
 public class FilterServiceClientTest {
@@ -29,11 +31,15 @@ public class FilterServiceClientTest {
     private static final String KAFKA_TOPIC = "test-topic";
     private static final String INPUT_S3_URL = "s3://test/test.csv";
     private static final Pattern OUTPUT_URL_PATTERN = Pattern.compile("^s3://test-bucket/(.*)$");
+    public static final String MOCK_ID = "mockId";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
     private KafkaProducer<String, String> mockKafkaProducer;
+
+    @Mock
+    private RequestIdProvider mockRequestIdProvider;
 
     @Captor
     private ArgumentCaptor<ProducerRecord<String, String>> recordArgumentCaptor;
@@ -43,7 +49,8 @@ public class FilterServiceClientTest {
     @BeforeMethod
     public void setup() {
         MockitoAnnotations.initMocks(this);
-        filterServiceClient = new FilterServiceClient(mockKafkaProducer, objectMapper, OUTPUT_BUCKET, KAFKA_TOPIC);
+        filterServiceClient = new FilterServiceClient(mockKafkaProducer, objectMapper, mockRequestIdProvider, OUTPUT_BUCKET, KAFKA_TOPIC);
+        when(mockRequestIdProvider.getId()).thenReturn(MOCK_ID);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
@@ -70,6 +77,7 @@ public class FilterServiceClientTest {
         final Map<String, Object> request = objectMapper.readValue(recordArgumentCaptor.getValue().value(), Map.class);
         assertThat(request)
                 .containsEntry("inputUrl", INPUT_S3_URL)
+                .containsEntry("requestId", MOCK_ID)
                 .containsKeys("outputUrl", "dimensions");
         assertThat((Map) request.get("dimensions"))
                 .containsEntry("first", Arrays.asList("a", "b"))
