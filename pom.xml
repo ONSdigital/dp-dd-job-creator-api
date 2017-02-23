@@ -42,7 +42,7 @@
         <dependency>
             <groupId>com.github.ONSdigital</groupId>
             <artifactId>dp-dd-backend-model</artifactId>
-            <version>develop-SNAPSHOT</version>
+            <version>v1.0.2</version>
         </dependency>
         <dependency>
             <groupId>com.github.ONSdigital</groupId>
