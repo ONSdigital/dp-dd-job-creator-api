@@ -7,12 +7,8 @@ import uk.co.onsdigital.discovery.model.*;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
+import javax.persistence.*;
 import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Component
@@ -37,14 +33,11 @@ public class JobRepository {
     }
 
     public void save(JobDto jobDto) {
-        Job job = jobDto.convertToModel();
-        List<FileStatus> files = job.getFiles().stream().map(entityManager::merge).collect(Collectors.toList());
-        job.setFiles(files);
-        entityManager.persist(job);
+        entityManager.merge(jobDto.convertToModel());
     }
 
     public JobDto findOne(String jobId) throws NoResultException {
-        Job job = entityManager.createNamedQuery(Job.FIND_ONE_QUERY, Job.class).setParameter(Job.ID_PARAM, jobId).getSingleResult();
+        Job job = entityManager.find(Job.class, jobId);
         return JobDto.convertFromModel(job);
     }
 

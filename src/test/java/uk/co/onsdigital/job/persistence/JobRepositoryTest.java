@@ -1,11 +1,5 @@
 package uk.co.onsdigital.job.persistence;
 
-import com.google.common.collect.ImmutableMap;
-import org.eclipse.persistence.config.EntityManagerProperties;
-import org.eclipse.persistence.config.PersistenceUnitProperties;
-import org.eclipse.persistence.platform.database.H2Platform;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import uk.co.onsdigital.discovery.model.*;
@@ -13,44 +7,24 @@ import uk.co.onsdigital.job.model.FileStatusDto;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
-import javax.persistence.*;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static java.time.Instant.now;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class JobRepositoryTest {
+public class JobRepositoryTest extends AbstractInMemoryDatabaseTests {
 
-    private EntityManagerFactory emf;
-    private EntityManager entityManager;
     private JobRepository jobRepository;
 
-    private EntityTransaction transaction;
-
-    @BeforeClass
-    public void setupPersistenceContext() {
-        this.emf = getInMemoryEntityManagerFactory();
-    }
-
     @BeforeMethod
-    public void setup() {
-        this.entityManager = emf.createEntityManager();
+    public void setupJobRepository() {
         this.jobRepository = new JobRepository(entityManager);
-
-        this.transaction = entityManager.getTransaction();
-        transaction.begin();
-    }
-
-    @AfterMethod
-    public void rollback() {
-        transaction.rollback();
     }
 
     @Test
@@ -146,17 +120,4 @@ public class JobRepositoryTest {
         return job;
     }
 
-    private static EntityManagerFactory getInMemoryEntityManagerFactory() {
-        Map<String, String> props = ImmutableMap.<String, String>builder()
-                .put(EntityManagerProperties.JDBC_URL, "jdbc:h2:mem:test")
-                .put(EntityManagerProperties.JDBC_USER, "SA")
-                .put(EntityManagerProperties.JDBC_PASSWORD, "")
-                .put(EntityManagerProperties.JDBC_DRIVER, "org.h2.Driver")
-                .put(PersistenceUnitProperties.DDL_GENERATION, PersistenceUnitProperties.DROP_AND_CREATE)
-                .put(PersistenceUnitProperties.DDL_GENERATION_MODE, PersistenceUnitProperties.DDL_DATABASE_GENERATION)
-                .put(PersistenceUnitProperties.TARGET_DATABASE, H2Platform.class.getName())
-                .build();
-
-        return Persistence.createEntityManagerFactory("data_discovery", props);
-    }
 }

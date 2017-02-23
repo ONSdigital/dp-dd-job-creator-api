@@ -78,6 +78,7 @@ public class FilterServiceClient {
                 final String json = jsonObjectMapper.writeValueAsString(filterRequest);
                 log.debug("Sending filter request to Kafka: {}", json);
                 kafkaProducer.send(new ProducerRecord<>(kafkaTopic, json));
+                log.debug("Request successfully queued: {}", file.getName());
             } catch (IOException e) {
                 log.error("Unable to send message to Kafka: {}", e);
                 throw new ServiceUnavailableException(e.getMessage());
