@@ -42,7 +42,7 @@
         <dependency>
             <groupId>com.github.ONSdigital</groupId>
             <artifactId>dp-dd-backend-model</artifactId>
-            <version>bugfix~job_creator_permissions-SNAPSHOT</version>
+            <version>develop-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
