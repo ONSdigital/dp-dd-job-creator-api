@@ -2,6 +2,7 @@ package uk.co.onsdigital.job.persistence;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import uk.co.onsdigital.discovery.model.*;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
@@ -30,8 +31,9 @@ public class JobRepository {
                 .getSingleResult();
     }
 
+    @Transactional
     public void deleteJobsExpiringBefore(Date before) {
-        entityManager.createNamedQuery(Job.DELETE_JOBS_EXPIRING_BEFORE).setParameter(Job.BEFORE_DATE_PARAM, before);
+        entityManager.createNamedQuery(Job.DELETE_JOBS_EXPIRING_BEFORE).setParameter(Job.BEFORE_DATE_PARAM, before).executeUpdate();
     }
 
     public void save(JobDto jobDto) {
