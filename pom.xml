@@ -42,7 +42,7 @@
         <dependency>
             <groupId>com.github.ONSdigital</groupId>
             <artifactId>dp-dd-backend-model</artifactId>
-            <version>feature~file_status_expiry-SNAPSHOT</version>
+            <version>develop-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.github.ONSdigital</groupId>

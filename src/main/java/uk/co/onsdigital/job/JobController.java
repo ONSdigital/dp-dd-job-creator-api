@@ -83,7 +83,7 @@ public class JobController {
         dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
         final Map<FileFormat, FileStatusDto> files = getInitialFileStatus(request);
 
-        final JobDto jobDto = new JobDto(files.values(), new Date(now().plus(1, HOURS).toEpochMilli()));
+        final JobDto jobDto = new JobDto(files.values(), Date.from(now().plus(1, HOURS)));
 
         // Check to see if the files already exist
         jobStatusChecker.updateStatus(jobDto);
