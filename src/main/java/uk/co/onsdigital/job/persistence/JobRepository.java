@@ -37,8 +37,11 @@ public class JobRepository {
         return JobDto.convertFromModel(entityManager.merge(jobDto.convertToModel()));
     }
 
-    public JobDto findOne(String jobId) throws NoResultException {
+    public JobDto findOne(String jobId) {
         Job job = entityManager.find(Job.class, jobId);
+        if (job == null) {
+            return null;
+        }
         return JobDto.convertFromModel(job);
     }
 
