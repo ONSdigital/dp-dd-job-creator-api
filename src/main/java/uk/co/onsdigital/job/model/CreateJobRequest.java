@@ -6,8 +6,8 @@ import lombok.Data;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -35,8 +35,8 @@ public class CreateJobRequest {
      *
      * @return the sorted dimensions from the request.
      */
-    public SortedMap<String, SortedSet<String>> getSortedDimensionFilters() {
-        final SortedMap<String, SortedSet<String>> result = new TreeMap<>();
+    public Map<String, Set<String>> getSortedDimensionFilters() {
+        final Map<String, Set<String>> result = new TreeMap<>();
         for (DimensionFilter filter : dimensions) {
             result.put(filter.getId(), new TreeSet<>(filter.getOptions()));
         }
