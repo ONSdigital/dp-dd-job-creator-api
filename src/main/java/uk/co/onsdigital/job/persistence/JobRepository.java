@@ -33,13 +33,6 @@ public class JobRepository {
         entityManager.createNamedQuery(Job.DELETE_JOBS_EXPIRING_BEFORE).setParameter(Job.BEFORE_DATE_PARAM, before).executeUpdate();
     }
 
-    @Transactional
-    public void deleteFilesGeneratedBefore(Date before) {
-        entityManager.createNamedQuery(FileStatus.DELETE_EXPIRED_FILES)
-                .setParameter(FileStatus.BEFORE_PARAM, before)
-                .executeUpdate();
-    }
-
     public JobDto save(JobDto jobDto) {
         return JobDto.convertFromModel(entityManager.merge(jobDto.convertToModel()));
     }

@@ -11,19 +11,22 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import uk.co.onsdigital.logging.RequestIdProvider;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.StatusDto;
+import uk.co.onsdigital.logging.RequestIdProvider;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @SuppressWarnings("unchecked")
 public class FilterServiceClientTest {
@@ -83,6 +86,48 @@ public class FilterServiceClientTest {
                 .containsEntry("first", Arrays.asList("a", "b"))
                 .containsEntry("second", Arrays.asList("c", "d"));
         assertThat(request.get("outputUrl")).asString().matches(OUTPUT_URL_PATTERN);
+    }
 
+    @Test
+    public void shouldNotSubmitFilesThatAreComplete() {
+        // Given
+        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
+        fileStatusDto.setSubmittedAt(new Date());
+        fileStatusDto.setStatus(StatusDto.COMPLETE);
+        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, fileStatusDto);
+
+        // When
+        filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, Collections.emptyMap());
+
+        // Then
+        verifyZeroInteractions(mockKafkaProducer);
+    }
+
+    @Test
+    public void shouldNotSubmitFilesThatHaveRecentlyBeenSubmitted() {
+        // Given
+        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
+        fileStatusDto.setSubmittedAt(new Date());
+        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, fileStatusDto);
+
+        // When
+        filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, Collections.emptyMap());
+
+        // Then
+        verifyZeroInteractions(mockKafkaProducer);
+    }
+
+    @Test
+    public void shouldResubmitFilesThatHaveTimedOut() {
+        // Given
+        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
+        fileStatusDto.setSubmittedAt(Date.from(Instant.now().minus(1, ChronoUnit.HOURS).minus(1, ChronoUnit.SECONDS)));
+        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, fileStatusDto);
+
+        // When
+        filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, Collections.emptyMap());
+
+        // Then
+        verify(mockKafkaProducer).send(any(ProducerRecord.class));
     }
 }
