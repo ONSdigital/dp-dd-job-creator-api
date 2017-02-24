@@ -1,14 +1,14 @@
 package uk.co.onsdigital.job.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import uk.co.onsdigital.discovery.model.FileStatus;
-import uk.co.onsdigital.discovery.model.Job;
-import uk.co.onsdigital.discovery.model.Status;
+import uk.co.onsdigital.discovery.model.*;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -27,6 +27,10 @@ public class JobDto {
 
     public JobDto () {
 
+    }
+
+    public JobDto(Collection<FileStatusDto> files, Date expiryTime) {
+        this(UUID.randomUUID().toString(), StatusDto.PENDING, new ArrayList<>(files), expiryTime);
     }
 
     private JobDto(String id, StatusDto status, List<FileStatusDto> files, Date expiryTime) {
@@ -91,5 +95,10 @@ public class JobDto {
         jobDto.setId(job.getId());
         jobDto.setFiles(job.getFiles().stream().map(FileStatusDto::convertFromModel).collect(Collectors.toList()));
         return jobDto;
+    }
+
+    @Override
+    public String toString() {
+        return "JobDto{id='" + id + "', status=" + status + ", files=" + files + ", expiryTime=" + expiryTime + '}';
     }
 }

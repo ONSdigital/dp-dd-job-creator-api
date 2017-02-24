@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import uk.co.onsdigital.job.persistence.JobRepository;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 /**
@@ -30,6 +31,9 @@ public class Scheduler {
     @Scheduled(initialDelay = 1000, fixedRate = 60000)
     void deleteExpiredJobs() {
         log.debug("Deleting expired jobs");
-        jobRepository.deleteJobsExpiringBefore(new Date());
+        final Date now = new Date();
+        jobRepository.deleteJobsExpiringBefore(now);
+        log.debug("Deleting old generated files from database");
+        jobRepository.deleteFilesGeneratedBefore(Date.from(now.toInstant().minus(2, ChronoUnit.HOURS)));
     }
 }

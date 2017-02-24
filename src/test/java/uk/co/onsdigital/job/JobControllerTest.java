@@ -22,7 +22,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.onsdigital.job.model.StatusDto.PENDING;
 
-public class JobDtoControllerTest {
+public class JobControllerTest {
 
     @Mock
     private DataSetRepository mockDataSetRepository;
@@ -94,7 +94,7 @@ public class JobDtoControllerTest {
     public void shouldCreatePendingInitialFileStatus() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
 
-        Map<FileFormat, FileStatusDto> result = JobController.generateFileNames(request);
+        Map<FileFormat, FileStatusDto> result = jobController.getInitialFileStatus(request);
 
         assertThat(result).containsOnlyKeys(FileFormat.CSV);
         assertThat(result.get(FileFormat.CSV).getStatus()).isEqualTo(PENDING);
@@ -183,7 +183,7 @@ public class JobDtoControllerTest {
     public void shouldReturnJobStatusFromCreateRequest() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
         when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
-        Mockito.doNothing().when(mockJobRepository).save(any(JobDto.class));
+        when(mockJobRepository.save(any(JobDto.class))).then(ctx -> ctx.getArguments()[0]);
 
         JobDto jobDto = jobController.createJob(request);
 

@@ -9,12 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import uk.co.onsdigital.job.exception.ServiceUnavailableException;
-import uk.co.onsdigital.logging.RequestIdProvider;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatusDto;
 import uk.co.onsdigital.job.model.FilterRequest;
+import uk.co.onsdigital.logging.RequestIdProvider;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 
@@ -67,6 +68,11 @@ public class FilterServiceClient {
                 continue;
             }
 
+            if (file.isSubmitted()) {
+                log.debug("Skipping file - has already been submitted: {}", file);
+                continue;
+            }
+
             final FilterRequest filterRequest = FilterRequest.builder()
                     .requestId(requestIdProvider.getId())
                     .inputUrl(dataSetS3Url)
@@ -78,6 +84,7 @@ public class FilterServiceClient {
                 final String json = jsonObjectMapper.writeValueAsString(filterRequest);
                 log.debug("Sending filter request to Kafka: {}", json);
                 kafkaProducer.send(new ProducerRecord<>(kafkaTopic, json));
+                file.setSubmittedAt(new Date());
                 log.debug("Request successfully queued: {}", file.getName());
             } catch (IOException e) {
                 log.error("Unable to send message to Kafka: {}", e);
