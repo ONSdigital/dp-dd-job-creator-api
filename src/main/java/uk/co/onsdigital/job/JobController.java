@@ -9,9 +9,22 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-import uk.co.onsdigital.job.exception.*;
-import uk.co.onsdigital.job.model.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import uk.co.onsdigital.job.exception.NoSuchDataSetException;
+import uk.co.onsdigital.job.exception.NoSuchJobException;
+import uk.co.onsdigital.job.exception.TooManyRequestsException;
+import uk.co.onsdigital.job.model.CreateJobRequest;
+import uk.co.onsdigital.job.model.FileFormat;
+import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.persistence.DataSetRepository;
 import uk.co.onsdigital.job.persistence.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
@@ -22,11 +35,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Base64;
+import java.util.Date;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.UUID;
 
 import static java.time.Instant.now;
+import static java.time.temporal.ChronoUnit.HOURS;
 import static uk.co.onsdigital.job.model.StatusDto.PENDING;
 
 /**
@@ -65,26 +81,21 @@ public class JobController {
         log.debug("Processing jobDto request: {}", request);
         final String dataSetS3Url;
         dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
-        final Map<FileFormat, FileStatusDto> files = generateFileNames(request);
+        final Map<FileFormat, FileStatusDto> files = getInitialFileStatus(request);
 
-        final JobDto jobDto = new JobDto();
-        jobDto.setId(UUID.randomUUID().toString());
-        jobDto.setStatus(PENDING);
-        jobDto.setFiles(files.values().stream().collect(Collectors.toList()));
-        jobDto.setExpiryTime(new Date(now().plus(1, ChronoUnit.HOURS).toEpochMilli()));
+        final JobDto jobDto = new JobDto(files.values(), Date.from(now().plus(1, HOURS)));
+
         // Check to see if the files already exist
         jobStatusChecker.updateStatus(jobDto);
 
         if (jobDto.isComplete()) {
-            jobRepository.save(jobDto);
-            return jobDto;
+            return jobRepository.save(jobDto);
         }
         if (jobRepository.countJobsWithStatus(PENDING) >= pendingJobLimit) {
             throw new TooManyRequestsException("Sorry - the number of requested jobs exceeds the limit");
         }
         filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
-        jobRepository.save(jobDto);
-        return jobDto;
+        return jobRepository.save(jobDto);
     }
 
     @ExceptionHandler(NoSuchDataSetException.class)
@@ -131,12 +142,26 @@ public class JobController {
          log.debug("Exception: {}", e);
     }
 
+    /**
+     * Determines the initial status of any files that need to be generated. The file name will be based on a SHA-256
+     * hash of the dataset ID and the (sorted) dimension filters so that all requests for the same filtering of the same
+     * dataset will result in the same filename being requested. We check in the database for any existing known status
+     * of the files that have been requested to avoid requesting them twice.
+     *
+     * @param request the request to generate file status for.
+     * @return a map from requested file formats to the initial status of the file to be generated.
+     */
     @VisibleForTesting
-    static Map<FileFormat, FileStatusDto> generateFileNames(final CreateJobRequest request) {
+    Map<FileFormat, FileStatusDto> getInitialFileStatus(final CreateJobRequest request) {
         final String baseFileName = generateBaseFileName(request);
         final Map<FileFormat, FileStatusDto> result = new EnumMap<>(FileFormat.class);
         for (FileFormat format : request.getFileFormats()) {
-            result.put(format, new FileStatusDto(baseFileName + format.getExtension()));
+            String fileName = baseFileName + format.getExtension();
+            FileStatusDto fileStatusDto = jobRepository.findFileStatus(fileName);
+            if (fileStatusDto == null) {
+                fileStatusDto = new FileStatusDto(fileName);
+            }
+            result.put(format, fileStatusDto);
         }
         return result;
     }

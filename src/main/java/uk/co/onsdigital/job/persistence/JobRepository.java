@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import uk.co.onsdigital.discovery.model.*;
+import uk.co.onsdigital.job.model.FileStatusDto;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
@@ -32,16 +33,27 @@ public class JobRepository {
         entityManager.createNamedQuery(Job.DELETE_JOBS_EXPIRING_BEFORE).setParameter(Job.BEFORE_DATE_PARAM, before).executeUpdate();
     }
 
-    public void save(JobDto jobDto) {
-        entityManager.merge(jobDto.convertToModel());
+    public JobDto save(JobDto jobDto) {
+        return JobDto.convertFromModel(entityManager.merge(jobDto.convertToModel()));
     }
 
-    public JobDto findOne(String jobId) throws NoResultException {
+    public JobDto findOne(String jobId) {
         Job job = entityManager.find(Job.class, jobId);
+        if (job == null) {
+            return null;
+        }
         return JobDto.convertFromModel(job);
     }
 
     public void delete(String jobId) {
         entityManager.createNamedQuery(Job.DELETE_ONE_QUERY).setParameter(Job.ID_PARAM, jobId);
+    }
+
+    public FileStatusDto findFileStatus(String filename) {
+        FileStatus status = entityManager.find(FileStatus.class, filename);
+        if (status != null) {
+            return FileStatusDto.convertFromModel(status);
+        }
+        return null;
     }
 }

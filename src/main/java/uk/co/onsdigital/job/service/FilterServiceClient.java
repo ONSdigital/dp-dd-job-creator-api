@@ -9,14 +9,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import uk.co.onsdigital.job.exception.ServiceUnavailableException;
-import uk.co.onsdigital.logging.RequestIdProvider;
 import uk.co.onsdigital.job.model.FileFormat;
 import uk.co.onsdigital.job.model.FileStatusDto;
 import uk.co.onsdigital.job.model.FilterRequest;
+import uk.co.onsdigital.logging.RequestIdProvider;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
+
+import static java.time.Instant.now;
+import static java.time.temporal.ChronoUnit.HOURS;
 
 /**
  * Client for requesting that an input dataset is filtered to create one or more output files.
@@ -67,6 +72,18 @@ public class FilterServiceClient {
                 continue;
             }
 
+            if (file.isSubmitted()) {
+                // Check to see how long ago the file was submitted. If more than one hour, then submit again. This will
+                // also update the submittedAt time so that we wait another hour before submitting it again.
+                final Instant oneHourAgo = now().minus(1, HOURS);
+                if (file.getSubmittedAt().toInstant().isBefore(oneHourAgo)) {
+                    log.warn("File was submitted more than 1 hour ago but has not been generated - resubmitting: {}", file);
+                } else {
+                    log.debug("Skipping file - has already been submitted recently: {}", file);
+                    continue;
+                }
+            }
+
             final FilterRequest filterRequest = FilterRequest.builder()
                     .requestId(requestIdProvider.getId())
                     .inputUrl(dataSetS3Url)
@@ -78,6 +95,7 @@ public class FilterServiceClient {
                 final String json = jsonObjectMapper.writeValueAsString(filterRequest);
                 log.debug("Sending filter request to Kafka: {}", json);
                 kafkaProducer.send(new ProducerRecord<>(kafkaTopic, json));
+                file.setSubmittedAt(new Date());
                 log.debug("Request successfully queued: {}", file.getName());
             } catch (IOException e) {
                 log.error("Unable to send message to Kafka: {}", e);
