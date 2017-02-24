@@ -50,7 +50,7 @@ public class JobControllerTest {
                 mockJobStatusChecker, pendingJobLimit);
 
         when(mockJobRepository.countJobsWithStatus(PENDING)).thenReturn(0L);
-        when(mockDataSetRepository.findMatchingDimensionValues(any(UUID.class), anyMap())).thenAnswer(ctx -> ctx.getArguments()[1]);
+        when(mockDataSetRepository.findMatchingDimensionValues(any(UUID.class), any(SortedMap.class))).thenAnswer(ctx -> ctx.getArguments()[1]);
     }
 
     @Test

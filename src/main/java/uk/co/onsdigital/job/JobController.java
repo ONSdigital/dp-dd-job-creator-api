@@ -85,8 +85,8 @@ public class JobController {
 
     @VisibleForTesting
     CreateJobRequest validateDimensionValues(CreateJobRequest request) throws InvalidDimensionException {
-        Map<String, Set<String>> requested = request.getSortedDimensionFilters();
-        Map<String, Set<String>> actual = dataSetRepository.findMatchingDimensionValues(request.getDataSetId(), requested);
+        SortedMap<String, SortedSet<String>> requested = request.getSortedDimensionFilters();
+        SortedMap<String, SortedSet<String>> actual = dataSetRepository.findMatchingDimensionValues(request.getDataSetId(), requested);
         CreateJobRequest validated = new CreateJobRequest();
         validated.setDataSetId(request.getDataSetId());
         validated.setFileFormats(request.getFileFormats());

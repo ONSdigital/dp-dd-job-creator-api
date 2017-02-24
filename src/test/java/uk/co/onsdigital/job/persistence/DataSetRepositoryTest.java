@@ -45,9 +45,9 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
 
     @Test
     public void shouldReturnEmptyMapWhenNothingMatches() {
-        HashMap<String, Set<String>> requestedValues = new HashMap<>();
-        requestedValues.put("invalid", singleton("foo"));
-        Map<String, Set<String>> result = dataSetRepository.findMatchingDimensionValues(UUID.randomUUID(), requestedValues);
+        SortedMap<String, SortedSet<String>> requestedValues = new TreeMap<>();
+        requestedValues.put("invalid", new TreeSet(singleton("foo")));
+        SortedMap<String, SortedSet<String>> result = dataSetRepository.findMatchingDimensionValues(UUID.randomUUID(), requestedValues);
         assertThat(result).isEmpty();
     }
 
@@ -61,12 +61,12 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
         String valueA = "valueA";
         persistDimensionWithValues(dataset, dimension1, valueA);
 
-        HashMap<String, Set<String>> requestedValues = new HashMap<>();
-        requestedValues.put(dimension1, new HashSet<>(Arrays.asList(valueA, "foo")));
-        requestedValues.put("invalid", new HashSet<>(Arrays.asList(valueA, "foo")));
-        Map<String, Set<String>> result = dataSetRepository.findMatchingDimensionValues(dataset.getId(), requestedValues);
+        SortedMap<String, SortedSet<String>> requestedValues = new TreeMap<>();
+        requestedValues.put(dimension1, new TreeSet<>(Arrays.asList(valueA, "foo")));
+        requestedValues.put("invalid", new TreeSet<>(Arrays.asList(valueA, "foo")));
+        SortedMap<String, SortedSet<String>> result = dataSetRepository.findMatchingDimensionValues(dataset.getId(), requestedValues);
         assertThat(result).containsOnlyKeys(dimension1);
-        assertThat(result).containsValues(singleton(valueA));
+        assertThat(result).containsValues(new TreeSet(singleton(valueA)));
 
     }
 
@@ -84,11 +84,13 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
         String dimension2 = "d2";
         persistDimensionWithValues(dataset, dimension2, valueA, valueB);
 
-        HashMap<String, Set<String>> requestedValues = new HashMap<>();
-        requestedValues.put(dimension1, new HashSet<>(Arrays.asList(valueA)));
-        requestedValues.put(dimension2, new HashSet<>(Arrays.asList(valueB, "foo")));
-        Map<String, Set<String>> result = dataSetRepository.findMatchingDimensionValues(dataset.getId(), requestedValues);
-        assertThat(result).containsExactly(new AbstractMap.SimpleEntry<>(dimension1, singleton(valueA)), new AbstractMap.SimpleEntry<>(dimension2, singleton(valueB)));
+        SortedMap<String, SortedSet<String>> requestedValues = new TreeMap<>();
+        requestedValues.put(dimension1, new TreeSet<>(Arrays.asList(valueA)));
+        requestedValues.put(dimension2, new TreeSet<>(Arrays.asList(valueB, "foo")));
+        SortedMap<String, SortedSet<String>> result = dataSetRepository.findMatchingDimensionValues(dataset.getId(), requestedValues);
+        assertThat(result).containsOnlyKeys(dimension1, dimension2);
+        assertThat(result.get(dimension1)).containsExactly(valueA);
+        assertThat(result.get(dimension2)).containsExactly(valueB);
 
     }
 

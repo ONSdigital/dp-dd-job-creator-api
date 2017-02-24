@@ -55,19 +55,19 @@ public class DataSetRepository {
      * @param requestedValues the requested dimension values.
      * @return the subset of requestedValues that actually exist in the dataset.
      */
-    public Map<String, Set<String>> findMatchingDimensionValues(UUID datasetId, Map<String, Set<String>> requestedValues) {
+    public SortedMap<String, SortedSet<String>> findMatchingDimensionValues(UUID datasetId, SortedMap<String, SortedSet<String>> requestedValues) {
         Query query = entityManager.createQuery(DIMENSION_VALUES_QUERY);
         query.setParameter(DATASET_ID_PARAM, datasetId);
         query.setParameter(NAMES_PARAM, requestedValues.keySet());
         query.setParameter(VALUES_PARAM, requestedValues.values().stream().flatMap(Set::stream).collect(Collectors.toList()));
         List<Object[]> resultList = query.getResultList();
-        Map<String, Set<String>> filtered = new HashMap<>();
+        SortedMap<String, SortedSet<String>> filtered = new TreeMap<>();
         for (Object[] pair : resultList) {
             String key = (String) pair[0];
             String value = (String) pair[1];
             // ensure we haven't added values from dimension x into dimension y
             if (requestedValues.get(key).contains(value)) {
-                Set<String> values = filtered.computeIfAbsent(key, v -> new HashSet<>());
+                Set<String> values = filtered.computeIfAbsent(key, v -> new TreeSet<>());
                 values.add(value);
             }
         }
