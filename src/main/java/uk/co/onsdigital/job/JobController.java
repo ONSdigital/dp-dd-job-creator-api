@@ -9,22 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-import uk.co.onsdigital.job.exception.NoSuchDataSetException;
-import uk.co.onsdigital.job.exception.NoSuchJobException;
-import uk.co.onsdigital.job.exception.TooManyRequestsException;
-import uk.co.onsdigital.job.model.CreateJobRequest;
-import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatusDto;
-import uk.co.onsdigital.job.model.JobDto;
+import org.springframework.web.bind.annotation.*;
+import uk.co.onsdigital.job.exception.*;
+import uk.co.onsdigital.job.model.*;
 import uk.co.onsdigital.job.persistence.DataSetRepository;
 import uk.co.onsdigital.job.persistence.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
@@ -35,11 +22,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.HOURS;
@@ -78,10 +61,12 @@ public class JobController {
     @CrossOrigin
     @Transactional
     public JobDto createJob(final @RequestBody CreateJobRequest request) throws JsonProcessingException {
-        log.debug("Processing jobDto request: {}", request);
+        log.debug("Processing job request: {}", request);
         final String dataSetS3Url;
         dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
-        final Map<FileFormat, FileStatusDto> files = getInitialFileStatus(request);
+        CreateJobRequest validated = validateDimensionValues(request);
+        log.debug("Validated job request:  {}", validated);
+        final Map<FileFormat, FileStatusDto> files = getInitialFileStatus(validated);
 
         final JobDto jobDto = new JobDto(files.values(), Date.from(now().plus(1, HOURS)));
 
@@ -94,14 +79,32 @@ public class JobController {
         if (jobRepository.countJobsWithStatus(PENDING) >= pendingJobLimit) {
             throw new TooManyRequestsException("Sorry - the number of requested jobs exceeds the limit");
         }
-        filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
+        filterServiceClient.submitFilterRequest(dataSetS3Url, files, validated.getSortedDimensionFilters());
         return jobRepository.save(jobDto);
     }
 
-    @ExceptionHandler(NoSuchDataSetException.class)
-    void handleNoSuchDataSetException(NoSuchDataSetException e, HttpServletResponse response) throws IOException {
+    @VisibleForTesting
+    CreateJobRequest validateDimensionValues(CreateJobRequest request) throws InvalidDimensionException {
+        SortedMap<String, SortedSet<String>> requested = request.getSortedDimensionFilters();
+        SortedMap<String, SortedSet<String>> actual = dataSetRepository.findMatchingDimensionValues(request.getDataSetId(), requested);
+        CreateJobRequest validated = new CreateJobRequest();
+        validated.setDataSetId(request.getDataSetId());
+        validated.setFileFormats(request.getFileFormats());
+        List<DimensionFilter> dimensions = new ArrayList<>();
+        validated.setDimensions(dimensions);
+        for (String dimension : requested.keySet()) {
+            if (!actual.containsKey(dimension)) {
+                throw new InvalidDimensionException("Dataset does not contain dimension '" + dimension + "' with any of the values " + requested.get(dimension));
+            }
+            dimensions.add(new DimensionFilter(dimension, new ArrayList<>(actual.get(dimension))));
+        }
+        return validated;
+    }
+
+    @ExceptionHandler({JobCreatorException.class})
+    void handleJobCreatorException(JobCreatorException e, HttpServletResponse response) throws IOException {
         log.error(e.getMessage());
-        response.sendError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+        response.sendError(e.getHttpStatus().value(), e.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)
