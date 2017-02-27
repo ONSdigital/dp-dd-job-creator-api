@@ -69,6 +69,9 @@ public class DataSetRepository {
                 requestValues.addAll(entry.getValue());
             }
         }
+        if (requestNames.isEmpty()) {
+            return Collections.emptySortedMap();
+        }
         query.setParameter(NAMES_PARAM, requestNames);
         query.setParameter(VALUES_PARAM, requestValues);
         List<Object[]> resultList = query.getResultList();
@@ -76,7 +79,7 @@ public class DataSetRepository {
         for (Object[] pair : resultList) {
             String key = (String) pair[0];
             String value = (String) pair[1];
-            // ensure we haven't added requestValues from dimension x into dimension y
+            // ensure we haven't added values from dimension x into dimension y
             if (requestedValues.get(key).contains(value)) {
                 Set<String> values = filtered.computeIfAbsent(key, v -> new TreeSet<>());
                 values.add(value);

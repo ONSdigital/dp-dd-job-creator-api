@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.anyOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMap;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -119,6 +120,27 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
         SortedMap<String, SortedSet<String>> result = dataSetRepository.findMatchingDimensionValues(dataset.getId(), requestedValues);
         assertThat(result).containsOnlyKeys(dimension1);
         assertThat(result.get(dimension1)).containsExactly(valueA);
+    }
+
+    @Test
+    public void shouldNotQueryWhenNoDimensionsHaveValues() {
+        DimensionalDataSet dataset = new DimensionalDataSet();
+        dataset.setId(UUID.randomUUID());
+        entityManager.persist(dataset);
+
+        String dimension1 = "d1";
+        String valueA = "valueA";
+        String valueB = "valueB";
+        persistDimensionWithValues(dataset, dimension1, valueA, valueB);
+
+        String dimension2 = "d2";
+        persistDimensionWithValues(dataset, dimension2, valueA, valueB);
+
+        SortedMap<String, SortedSet<String>> requestedValues = new TreeMap<>();
+        requestedValues.put(dimension1, new TreeSet<>());
+        requestedValues.put(dimension2, new TreeSet<>());
+        SortedMap<String, SortedSet<String>> result = dataSetRepository.findMatchingDimensionValues(dataset.getId(), requestedValues);
+        assertThat(result).isEmpty();
     }
 
     private void persistDimensionWithValues(DimensionalDataSet dataset, String dimension1, String... values) {
