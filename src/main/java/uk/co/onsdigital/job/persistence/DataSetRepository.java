@@ -2,12 +2,15 @@ package uk.co.onsdigital.job.persistence;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import uk.co.onsdigital.discovery.model.*;
 import uk.co.onsdigital.job.exception.NoSuchDataSetException;
 
 import javax.persistence.*;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 /**
  * Repository for looking up datasets.
@@ -58,14 +61,22 @@ public class DataSetRepository {
     public SortedMap<String, SortedSet<String>> findMatchingDimensionValues(UUID datasetId, SortedMap<String, SortedSet<String>> requestedValues) {
         Query query = entityManager.createQuery(DIMENSION_VALUES_QUERY);
         query.setParameter(DATASET_ID_PARAM, datasetId);
-        query.setParameter(NAMES_PARAM, requestedValues.keySet());
-        query.setParameter(VALUES_PARAM, requestedValues.values().stream().flatMap(Set::stream).collect(Collectors.toList()));
+        Set<String> requestNames = new HashSet<>();
+        Set<String> requestValues = new HashSet<>();
+        for (Map.Entry<String, SortedSet<String>> entry : requestedValues.entrySet()) {
+            if (!isEmpty(entry.getValue())) {
+                requestNames.add(entry.getKey());
+                requestValues.addAll(entry.getValue());
+            }
+        }
+        query.setParameter(NAMES_PARAM, requestNames);
+        query.setParameter(VALUES_PARAM, requestValues);
         List<Object[]> resultList = query.getResultList();
         SortedMap<String, SortedSet<String>> filtered = new TreeMap<>();
         for (Object[] pair : resultList) {
             String key = (String) pair[0];
             String value = (String) pair[1];
-            // ensure we haven't added values from dimension x into dimension y
+            // ensure we haven't added requestValues from dimension x into dimension y
             if (requestedValues.get(key).contains(value)) {
                 Set<String> values = filtered.computeIfAbsent(key, v -> new TreeSet<>());
                 values.add(value);

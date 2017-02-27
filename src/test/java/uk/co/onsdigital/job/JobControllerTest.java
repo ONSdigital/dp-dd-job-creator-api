@@ -259,7 +259,19 @@ public class JobControllerTest {
 
         jobController.validateDimensionValues(request2);
     }
+    
+    @Test
+    public void shouldNotQueryEmptyFilters() {
+        UUID dataSetId = UUID.randomUUID();
+        CreateJobRequest request1 = request(dataSetId);
+        request1.getDimensions().clear();
+        when(mockDataSetRepository.findMatchingDimensionValues(any(UUID.class), eq(request1.getSortedDimensionFilters()))).thenAnswer(ctx -> request1.getSortedDimensionFilters());
 
+        CreateJobRequest result = jobController.validateDimensionValues(request1);
+        assertThat(result).isEqualTo(request1);
+
+        verify(mockDataSetRepository, times(0)).findMatchingDimensionValues(any(UUID.class), any(SortedMap.class));
+    }
 
     private static CreateJobRequest request(UUID dataSetId) {
         CreateJobRequest request = new CreateJobRequest();
