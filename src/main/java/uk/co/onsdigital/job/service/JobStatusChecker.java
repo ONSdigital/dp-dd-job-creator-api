@@ -39,7 +39,7 @@ public class JobStatusChecker {
      * @param jobDto the jobDto to check and update the status of.
      */
     public void updateStatus(JobDto jobDto) {
-        log.debug("Checking status of jobDto: {}", jobDto);
+        log.debug("Checking status of job: {}", jobDto);
         if (!jobDto.isComplete()) {
             for (FileStatusDto fileStatusDto : jobDto.getFiles()) {
                 if (!fileStatusDto.isComplete()) {
@@ -53,6 +53,6 @@ public class JobStatusChecker {
                 jobDto.setStatus(StatusDto.COMPLETE);
             }
         }
-        log.debug("Checked status of jobDto: {}", jobDto);
+        log.debug("Checked status of job: {}", jobDto);
     }
 }

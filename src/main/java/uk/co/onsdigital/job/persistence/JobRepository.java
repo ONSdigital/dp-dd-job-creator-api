@@ -2,16 +2,14 @@ package uk.co.onsdigital.job.persistence;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import uk.co.onsdigital.discovery.model.*;
+import uk.co.onsdigital.job.model.FileStatusDto;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
+import javax.persistence.*;
 import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Component
@@ -30,23 +28,32 @@ public class JobRepository {
                 .getSingleResult();
     }
 
+    @Transactional
     public void deleteJobsExpiringBefore(Date before) {
-        entityManager.createNamedQuery(Job.DELETE_JOBS_EXPIRING_BEFORE).setParameter(Job.BEFORE_DATE_PARAM, before);
+        entityManager.createNamedQuery(Job.DELETE_JOBS_EXPIRING_BEFORE).setParameter(Job.BEFORE_DATE_PARAM, before).executeUpdate();
     }
 
-    public void save(JobDto jobDto) {
-        Job job = jobDto.convertToModel();
-        List<FileStatus> files = job.getFiles().stream().map(entityManager::merge).collect(Collectors.toList());
-        job.setFiles(files);
-        entityManager.persist(job);
+    public JobDto save(JobDto jobDto) {
+        return JobDto.convertFromModel(entityManager.merge(jobDto.convertToModel()));
     }
 
-    public JobDto findOne(String jobId) throws NoResultException {
-        Job job = entityManager.createNamedQuery(Job.FIND_ONE_QUERY, Job.class).setParameter(Job.ID_PARAM, jobId).getSingleResult();
+    public JobDto findOne(String jobId) {
+        Job job = entityManager.find(Job.class, jobId);
+        if (job == null) {
+            return null;
+        }
         return JobDto.convertFromModel(job);
     }
 
     public void delete(String jobId) {
         entityManager.createNamedQuery(Job.DELETE_ONE_QUERY).setParameter(Job.ID_PARAM, jobId);
+    }
+
+    public FileStatusDto findFileStatus(String filename) {
+        FileStatus status = entityManager.find(FileStatus.class, filename);
+        if (status != null) {
+            return FileStatusDto.convertFromModel(status);
+        }
+        return null;
     }
 }

@@ -1,9 +1,7 @@
 package uk.co.onsdigital.job;
 
-import com.amazonaws.services.apigateway.model.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
-import javassist.tools.web.BadHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,29 +10,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import uk.co.onsdigital.job.exception.NoSuchDataSetException;
-import uk.co.onsdigital.job.exception.NoSuchJobException;
-import uk.co.onsdigital.job.exception.TooManyRequestsException;
-import uk.co.onsdigital.job.model.CreateJobRequest;
-import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatusDto;
-import uk.co.onsdigital.job.model.JobDto;
+import uk.co.onsdigital.job.exception.*;
+import uk.co.onsdigital.job.model.*;
 import uk.co.onsdigital.job.persistence.DataSetRepository;
 import uk.co.onsdigital.job.persistence.JobRepository;
 import uk.co.onsdigital.job.service.FilterServiceClient;
 import uk.co.onsdigital.job.service.JobStatusChecker;
 
-import javax.persistence.NoResultException;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.time.Instant.now;
+import static java.time.temporal.ChronoUnit.HOURS;
 import static uk.co.onsdigital.job.model.StatusDto.PENDING;
 
 /**
@@ -70,35 +61,56 @@ public class JobController {
     @CrossOrigin
     @Transactional
     public JobDto createJob(final @RequestBody CreateJobRequest request) throws JsonProcessingException {
-        log.debug("Processing jobDto request: {}", request);
+        log.debug("Processing job request: {}", request);
         final String dataSetS3Url;
         dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
-        final Map<FileFormat, FileStatusDto> files = generateFileNames(request);
+        CreateJobRequest validated = validateDimensionValues(request);
+        log.debug("Validated job request:  {}", validated);
+        final Map<FileFormat, FileStatusDto> files = getInitialFileStatus(validated);
 
-        final JobDto jobDto = new JobDto();
-        jobDto.setId(UUID.randomUUID().toString());
-        jobDto.setStatus(PENDING);
-        jobDto.setFiles(files.values().stream().collect(Collectors.toList()));
-        jobDto.setExpiryTime(new Date(now().plus(1, ChronoUnit.HOURS).toEpochMilli()));
+        final JobDto jobDto = new JobDto(files.values(), Date.from(now().plus(1, HOURS)));
+
         // Check to see if the files already exist
         jobStatusChecker.updateStatus(jobDto);
 
         if (jobDto.isComplete()) {
-            jobRepository.save(jobDto);
-            return jobDto;
+            return jobRepository.save(jobDto);
         }
         if (jobRepository.countJobsWithStatus(PENDING) >= pendingJobLimit) {
             throw new TooManyRequestsException("Sorry - the number of requested jobs exceeds the limit");
         }
-        filterServiceClient.submitFilterRequest(dataSetS3Url, files, request.getSortedDimensionFilters());
-        jobRepository.save(jobDto);
-        return jobDto;
+        filterServiceClient.submitFilterRequest(dataSetS3Url, files, validated.getSortedDimensionFilters());
+        return jobRepository.save(jobDto);
     }
 
-    @ExceptionHandler
-    void handleNoSuchDataSetException(NoSuchDataSetException e, HttpServletResponse response) throws IOException {
+    @VisibleForTesting
+    CreateJobRequest validateDimensionValues(CreateJobRequest request) throws InvalidDimensionException {
+        SortedMap<String, SortedSet<String>> requested = request.getSortedDimensionFilters();
+        SortedMap<String, SortedSet<String>> actual = dataSetRepository.findMatchingDimensionValues(request.getDataSetId(), requested);
+        CreateJobRequest validated = new CreateJobRequest();
+        validated.setDataSetId(request.getDataSetId());
+        validated.setFileFormats(request.getFileFormats());
+        List<DimensionFilter> dimensions = new ArrayList<>();
+        validated.setDimensions(dimensions);
+        for (String dimension : requested.keySet()) {
+            if (!actual.containsKey(dimension)) {
+                throw new InvalidDimensionException("Dataset does not contain dimension '" + dimension + "' with any of the values " + requested.get(dimension));
+            }
+            dimensions.add(new DimensionFilter(dimension, new ArrayList<>(actual.get(dimension))));
+        }
+        return validated;
+    }
+
+    @ExceptionHandler({JobCreatorException.class})
+    void handleJobCreatorException(JobCreatorException e, HttpServletResponse response) throws IOException {
         log.error(e.getMessage());
-        response.sendError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+        response.sendError(e.getHttpStatus().value(), e.getMessage());
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    void handleRuntimeException(RuntimeException e, HttpServletResponse response) throws IOException {
+        log.error("Unexpected RuntimeException!", e);
+        response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
     }
 
     @GetMapping("/job/{id}")
@@ -133,12 +145,26 @@ public class JobController {
          log.debug("Exception: {}", e);
     }
 
+    /**
+     * Determines the initial status of any files that need to be generated. The file name will be based on a SHA-256
+     * hash of the dataset ID and the (sorted) dimension filters so that all requests for the same filtering of the same
+     * dataset will result in the same filename being requested. We check in the database for any existing known status
+     * of the files that have been requested to avoid requesting them twice.
+     *
+     * @param request the request to generate file status for.
+     * @return a map from requested file formats to the initial status of the file to be generated.
+     */
     @VisibleForTesting
-    static Map<FileFormat, FileStatusDto> generateFileNames(final CreateJobRequest request) {
+    Map<FileFormat, FileStatusDto> getInitialFileStatus(final CreateJobRequest request) {
         final String baseFileName = generateBaseFileName(request);
         final Map<FileFormat, FileStatusDto> result = new EnumMap<>(FileFormat.class);
         for (FileFormat format : request.getFileFormats()) {
-            result.put(format, new FileStatusDto(baseFileName + format.getExtension()));
+            String fileName = baseFileName + format.getExtension();
+            FileStatusDto fileStatusDto = jobRepository.findFileStatus(fileName);
+            if (fileStatusDto == null) {
+                fileStatusDto = new FileStatusDto(fileName);
+            }
+            result.put(format, fileStatusDto);
         }
         return result;
     }

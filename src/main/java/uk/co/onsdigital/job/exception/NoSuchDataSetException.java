@@ -8,9 +8,8 @@ import java.util.UUID;
 /**
  * Indicates that the requested dataset does not exist in the database.
  */
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class NoSuchDataSetException extends RuntimeException {
+public class NoSuchDataSetException extends JobCreatorException {
     public NoSuchDataSetException(UUID datasetId) {
-        super("Dataset not found: " + datasetId);
+        super("Dataset not found: " + datasetId, HttpStatus.BAD_REQUEST);
     }
 }
