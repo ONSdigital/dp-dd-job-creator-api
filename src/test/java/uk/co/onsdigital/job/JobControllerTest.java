@@ -3,9 +3,7 @@ package uk.co.onsdigital.job;
 import org.mockito.*;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import uk.co.onsdigital.job.exception.NoSuchDataSetException;
-import uk.co.onsdigital.job.exception.NoSuchJobException;
-import uk.co.onsdigital.job.exception.TooManyRequestsException;
+import uk.co.onsdigital.job.exception.*;
 import uk.co.onsdigital.job.model.*;
 import uk.co.onsdigital.job.persistence.DataSetRepository;
 import uk.co.onsdigital.job.persistence.JobRepository;
@@ -16,13 +14,14 @@ import java.util.*;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.onsdigital.job.model.StatusDto.PENDING;
 
-public class JobDtoControllerTest {
+public class JobControllerTest {
 
     @Mock
     private DataSetRepository mockDataSetRepository;
@@ -51,6 +50,7 @@ public class JobDtoControllerTest {
                 mockJobStatusChecker, pendingJobLimit);
 
         when(mockJobRepository.countJobsWithStatus(PENDING)).thenReturn(0L);
+        when(mockDataSetRepository.findMatchingDimensionValues(any(UUID.class), any(SortedMap.class))).thenAnswer(ctx -> ctx.getArguments()[1]);
     }
 
     @Test
@@ -94,7 +94,7 @@ public class JobDtoControllerTest {
     public void shouldCreatePendingInitialFileStatus() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
 
-        Map<FileFormat, FileStatusDto> result = JobController.generateFileNames(request);
+        Map<FileFormat, FileStatusDto> result = jobController.getInitialFileStatus(request);
 
         assertThat(result).containsOnlyKeys(FileFormat.CSV);
         assertThat(result.get(FileFormat.CSV).getStatus()).isEqualTo(PENDING);
@@ -183,7 +183,7 @@ public class JobDtoControllerTest {
     public void shouldReturnJobStatusFromCreateRequest() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
         when(mockDataSetRepository.findS3urlForDataSet(request.getDataSetId())).thenReturn("s3_url");
-        Mockito.doNothing().when(mockJobRepository).save(any(JobDto.class));
+        when(mockJobRepository.save(any(JobDto.class))).then(ctx -> ctx.getArguments()[0]);
 
         JobDto jobDto = jobController.createJob(request);
 
@@ -237,14 +237,39 @@ public class JobDtoControllerTest {
         assertThat(result).isEqualTo(jobDto);
     }
 
+    @Test
+    public void shouldStripInvalidDimensionValues() throws Exception {
+        UUID dataSetId = UUID.randomUUID();
+        CreateJobRequest request1 = request(dataSetId);
+        CreateJobRequest request2 = request(dataSetId);
+        request2.getDimensions().get(0).getOptions().add("foo");
+        when(mockDataSetRepository.findMatchingDimensionValues(any(UUID.class), eq(request2.getSortedDimensionFilters()))).thenAnswer(ctx -> request1.getSortedDimensionFilters());
+
+        CreateJobRequest result = jobController.validateDimensionValues(request2);
+        assertThat(result).isEqualTo(request1);
+    }
+
+    @Test(expectedExceptions = InvalidDimensionException.class)
+    public void shouldThrowExceptionForInvalidDimension() throws Exception {
+        UUID dataSetId = UUID.randomUUID();
+        CreateJobRequest request1 = request(dataSetId);
+        CreateJobRequest request2 = request(dataSetId);
+        request2.getDimensions().add(new DimensionFilter("foo", singletonList("bar")));
+        when(mockDataSetRepository.findMatchingDimensionValues(any(UUID.class), eq(request2.getSortedDimensionFilters()))).thenAnswer(ctx -> request1.getSortedDimensionFilters());
+
+        jobController.validateDimensionValues(request2);
+    }
+
+
     private static CreateJobRequest request(UUID dataSetId) {
         CreateJobRequest request = new CreateJobRequest();
         request.setDataSetId(dataSetId);
-        List<DimensionFilter> dimensions = asList(new DimensionFilter("first", asList("a", "b")),
-                new DimensionFilter("second", asList("c", "d")));
+        List<DimensionFilter> dimensions = new ArrayList<>(asList(new DimensionFilter("first", new ArrayList<>(asList("a", "b"))),
+                new DimensionFilter("second", new ArrayList<>(asList("c", "d")))));
         Set<FileFormat> formats = singleton(FileFormat.CSV);
         request.setDimensions(dimensions);
         request.setFileFormats(formats);
         return request;
     }
+
 }

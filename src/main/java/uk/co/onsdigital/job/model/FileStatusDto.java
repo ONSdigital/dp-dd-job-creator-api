@@ -2,11 +2,10 @@ package uk.co.onsdigital.job.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Data;
 import lombok.NonNull;
-import lombok.experimental.Tolerate;
-import uk.co.onsdigital.discovery.model.FileStatus;
-import uk.co.onsdigital.discovery.model.Status;
+import uk.co.onsdigital.discovery.model.*;
+
+import java.util.Date;
 
 
 /**
@@ -21,10 +20,7 @@ public class FileStatusDto {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String url;
 
-    @Tolerate
-    FileStatusDto() {
-        // Default constructor for JPA
-    }
+    private Date submittedAt;
 
     public FileStatusDto(String name) {
         this.name = name;
@@ -33,6 +29,21 @@ public class FileStatusDto {
     @JsonIgnore
     public boolean isComplete() {
         return status == StatusDto.COMPLETE;
+    }
+
+    /** Whether the job has been submitted to the filterer or not. */
+    @JsonIgnore
+    public boolean isSubmitted() {
+        return submittedAt != null;
+    }
+
+    @JsonIgnore
+    public Date getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public void setSubmittedAt(Date submittedAt) {
+        this.submittedAt = submittedAt;
     }
 
     public String getName() {
@@ -64,17 +75,21 @@ public class FileStatusDto {
         fileStatus.setStatus(StatusDto.convertToModel(this.status));
         fileStatus.setName(this.name);
         fileStatus.setUrl(this.url);
+        fileStatus.setSubmittedAt(this.submittedAt);
         return fileStatus;
     }
 
     public static FileStatusDto convertFromModel(FileStatus fileStatus) {
-        FileStatusDto fileStatusDto = new FileStatusDto();
-
-        fileStatusDto.setName(fileStatus.getName());
+        FileStatusDto fileStatusDto = new FileStatusDto(fileStatus.getName());
         fileStatusDto.setStatus(StatusDto.fromString(fileStatus.getStatus().toString()));
         fileStatusDto.setUrl(fileStatus.getUrl());
+        fileStatusDto.setSubmittedAt(fileStatus.getSubmittedAt());
 
         return fileStatusDto;
     }
 
+    @Override
+    public String toString() {
+        return "FileStatusDto{name='" + name  + "', status=" + status + ", url='" + url + "', submittedAt=" + submittedAt + "}";
+    }
 }
