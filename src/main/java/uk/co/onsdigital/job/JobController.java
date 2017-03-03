@@ -66,7 +66,7 @@ public class JobController {
         dataSetS3Url = dataSetRepository.findS3urlForDataSet(request.getDataSetId());
         CreateJobRequest validated = validateDimensionValues(request);
         log.debug("Validated job request:  {}", validated);
-        final Map<FileFormat, FileStatusDto> files = getInitialFileStatus(validated);
+        final Map<FileFormat, FileDto> files = getInitialFileStatus(validated);
 
         final JobDto jobDto = new JobDto(files.values(), Date.from(now().plus(1, HOURS)));
 
@@ -158,16 +158,16 @@ public class JobController {
      * @return a map from requested file formats to the initial status of the file to be generated.
      */
     @VisibleForTesting
-    Map<FileFormat, FileStatusDto> getInitialFileStatus(final CreateJobRequest request) {
+    Map<FileFormat, FileDto> getInitialFileStatus(final CreateJobRequest request) {
         final String baseFileName = generateBaseFileName(request);
-        final Map<FileFormat, FileStatusDto> result = new EnumMap<>(FileFormat.class);
+        final Map<FileFormat, FileDto> result = new EnumMap<>(FileFormat.class);
         for (FileFormat format : request.getFileFormats()) {
             String fileName = baseFileName + format.getExtension();
-            FileStatusDto fileStatusDto = jobRepository.findFileStatus(fileName);
-            if (fileStatusDto == null) {
-                fileStatusDto = new FileStatusDto(fileName);
+            FileDto fileDto = jobRepository.findFileStatus(fileName);
+            if (fileDto == null) {
+                fileDto = new FileDto(fileName);
             }
-            result.put(format, fileStatusDto);
+            result.put(format, fileDto);
         }
         return result;
     }

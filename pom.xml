@@ -39,10 +39,15 @@
     </repositories>
 
     <dependencies>
+        <!--<dependency>-->
+            <!--<groupId>com.github.ONSdigital</groupId>-->
+            <!--<artifactId>dp-dd-backend-model</artifactId>-->
+            <!--<version>v1.0.27</version>-->
+        <!--</dependency>-->
         <dependency>
-            <groupId>com.github.ONSdigital</groupId>
-            <artifactId>dp-dd-backend-model</artifactId>
-            <version>v1.0.3</version>
+            <groupId>uk.co.onsdigital.discovery</groupId>
+            <artifactId>dd-model</artifactId>
+            <version>1.0.27</version>
         </dependency>
         <dependency>
             <groupId>com.github.ONSdigital</groupId>

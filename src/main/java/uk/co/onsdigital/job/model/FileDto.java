@@ -11,7 +11,7 @@ import java.util.Date;
 /**
  * Indicates the statusDto of a particular output file in a job.
  */
-public class FileStatusDto {
+public class FileDto {
     private  String name;
 
     @NonNull
@@ -22,7 +22,7 @@ public class FileStatusDto {
 
     private Date submittedAt;
 
-    public FileStatusDto(String name) {
+    public FileDto(String name) {
         this.name = name;
     }
 
@@ -70,26 +70,26 @@ public class FileStatusDto {
         this.status = status;
     }
 
-    public FileStatus convertToModel() {
-        FileStatus fileStatus = new FileStatus();
-        fileStatus.setStatus(StatusDto.convertToModel(this.status));
-        fileStatus.setName(this.name);
-        fileStatus.setUrl(this.url);
-        fileStatus.setSubmittedAt(this.submittedAt);
-        return fileStatus;
+    public File convertToModel() {
+        File file = new File();
+        file.setStatus(StatusDto.convertToModel(this.status));
+        file.setName(this.name);
+        file.setUrl(this.url);
+        file.setSubmittedAt(this.submittedAt);
+        return file;
     }
 
-    public static FileStatusDto convertFromModel(FileStatus fileStatus) {
-        FileStatusDto fileStatusDto = new FileStatusDto(fileStatus.getName());
-        fileStatusDto.setStatus(StatusDto.fromString(fileStatus.getStatus().toString()));
-        fileStatusDto.setUrl(fileStatus.getUrl());
-        fileStatusDto.setSubmittedAt(fileStatus.getSubmittedAt());
+    public static FileDto convertFromModel(File file) {
+        FileDto fileDto = new FileDto(file.getName());
+        fileDto.setStatus(StatusDto.fromString(file.getStatus().toString()));
+        fileDto.setUrl(file.getUrl());
+        fileDto.setSubmittedAt(file.getSubmittedAt());
 
-        return fileStatusDto;
+        return fileDto;
     }
 
     @Override
     public String toString() {
-        return "FileStatusDto{name='" + name  + "', status=" + status + ", url='" + url + "', submittedAt=" + submittedAt + "}";
+        return "FileDto{name='" + name  + "', status=" + status + ", url='" + url + "', submittedAt=" + submittedAt + "}";
     }
 }

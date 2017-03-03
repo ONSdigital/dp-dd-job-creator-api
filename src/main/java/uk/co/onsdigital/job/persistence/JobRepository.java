@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import uk.co.onsdigital.discovery.model.*;
-import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.FileDto;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
@@ -49,10 +49,10 @@ public class JobRepository {
         entityManager.createNamedQuery(Job.DELETE_ONE_QUERY).setParameter(Job.ID_PARAM, jobId);
     }
 
-    public FileStatusDto findFileStatus(String filename) {
-        FileStatus status = entityManager.find(FileStatus.class, filename);
-        if (status != null) {
-            return FileStatusDto.convertFromModel(status);
+    public FileDto findFileStatus(String filename) {
+        File file = entityManager.find(File.class, filename);
+        if (file != null) {
+            return FileDto.convertFromModel(file);
         }
         return null;
     }
