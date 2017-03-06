@@ -3,7 +3,7 @@ package uk.co.onsdigital.job.persistence;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import uk.co.onsdigital.discovery.model.*;
-import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.FileDto;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
@@ -63,7 +63,7 @@ public class JobRepositoryTest extends AbstractInMemoryDatabaseTests {
         Job job2 = createJob(now().plus(2, ChronoUnit.DAYS));
         job2.setFiles(job1.getFiles());
         int numFiles = job1.getFiles().size();
-        List<String> fileNames = job1.getFiles().stream().map(FileStatus::getName).collect(Collectors.toList());
+        List<String> fileNames = job1.getFiles().stream().map(File::getName).collect(Collectors.toList());
         entityManager.merge(job1);
         entityManager.merge(job2);
 
@@ -86,7 +86,7 @@ public class JobRepositoryTest extends AbstractInMemoryDatabaseTests {
         JobDto jobDto = new JobDto();
         jobDto.setId(UUID.randomUUID().toString());
         jobDto.setExpiryTime(new Date(System.currentTimeMillis() + 60000L));
-        jobDto.setFiles(Collections.singletonList(new FileStatusDto("test.csv")));
+        jobDto.setFiles(Collections.singletonList(new FileDto("test.csv")));
         jobDto.setStatus(StatusDto.PENDING);
 
         // When
@@ -114,7 +114,7 @@ public class JobRepositoryTest extends AbstractInMemoryDatabaseTests {
         job.setStatus(Status.PENDING);
         job.setExpiryTime(new Date(expiry.toEpochMilli()));
 
-        FileStatus file = new FileStatus("test.csv");
+        File file = new File("test.csv");
         job.setFiles(Collections.singletonList(file));
 
         return job;

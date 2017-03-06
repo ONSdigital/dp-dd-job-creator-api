@@ -1,35 +1,16 @@
 <persistence xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence persistence_1_0.xsd" version="1.0">
     <persistence-unit name="data_discovery" transaction-type="RESOURCE_LOCAL">
         <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
-        <class>uk.co.onsdigital.discovery.model.Category</class>
-        <class>uk.co.onsdigital.discovery.model.ConceptSystem</class>
         <class>uk.co.onsdigital.discovery.model.DataResource</class>
-        <class>uk.co.onsdigital.discovery.model.DimensionalDataPoint</class>
-        <class>uk.co.onsdigital.discovery.model.DimensionalDataPointPK</class>
-        <class>uk.co.onsdigital.discovery.model.DimensionalDataSet</class>
+        <class>uk.co.onsdigital.discovery.model.DataSet</class>
         <class>uk.co.onsdigital.discovery.model.Dimension</class>
         <class>uk.co.onsdigital.discovery.model.DimensionValue</class>
-        <class>uk.co.onsdigital.discovery.model.FileStatus</class>
-        <class>uk.co.onsdigital.discovery.model.GeographicArea</class>
-        <class>uk.co.onsdigital.discovery.model.GeographicAreaHierarchy</class>
-        <class>uk.co.onsdigital.discovery.model.GeographicAreaType</class>
-        <class>uk.co.onsdigital.discovery.model.GeographicLevelType</class>
+        <class>uk.co.onsdigital.discovery.model.File</class>
         <class>uk.co.onsdigital.discovery.model.Hierarchy</class>
         <class>uk.co.onsdigital.discovery.model.HierarchyEntry</class>
         <class>uk.co.onsdigital.discovery.model.HierarchyLevelType</class>
         <class>uk.co.onsdigital.discovery.model.Job</class>
-        <class>uk.co.onsdigital.discovery.model.ObservationType</class>
-        <class>uk.co.onsdigital.discovery.model.Population</class>
-        <class>uk.co.onsdigital.discovery.model.PopulationPK</class>
-        <class>uk.co.onsdigital.discovery.model.Presentation</class>
-        <class>uk.co.onsdigital.discovery.model.PresentationType</class>
-        <class>uk.co.onsdigital.discovery.model.SubjectField</class>
-        <class>uk.co.onsdigital.discovery.model.TimePeriod</class>
-        <class>uk.co.onsdigital.discovery.model.TimeType</class>
-        <class>uk.co.onsdigital.discovery.model.UnitType</class>
         <class>uk.co.onsdigital.discovery.model.UUIDConverter</class>
-        <class>uk.co.onsdigital.discovery.model.ValueDomain</class>
-        <class>uk.co.onsdigital.discovery.model.Variable</class>
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
         <properties>
             <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/data_discovery" />

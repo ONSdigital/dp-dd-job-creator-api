@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriTemplate;
-import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.FileDto;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
@@ -41,15 +41,15 @@ public class JobStatusChecker {
     public void updateStatus(JobDto jobDto) {
         log.debug("Checking status of job: {}", jobDto);
         if (!jobDto.isComplete()) {
-            for (FileStatusDto fileStatusDto : jobDto.getFiles()) {
-                if (!fileStatusDto.isComplete()) {
-                    if (s3Client.doesObjectExist(outputS3Bucket, fileStatusDto.getName())) {
-                        fileStatusDto.setStatus(StatusDto.COMPLETE);
-                        fileStatusDto.setUrl(downloadUrlTemplate.expand(fileStatusDto.getName()).toString());
+            for (FileDto fileDto : jobDto.getFiles()) {
+                if (!fileDto.isComplete()) {
+                    if (s3Client.doesObjectExist(outputS3Bucket, fileDto.getName())) {
+                        fileDto.setStatus(StatusDto.COMPLETE);
+                        fileDto.setUrl(downloadUrlTemplate.expand(fileDto.getName()).toString());
                     }
                 }
             }
-            if (jobDto.getFiles().stream().allMatch(FileStatusDto::isComplete)) {
+            if (jobDto.getFiles().stream().allMatch(FileDto::isComplete)) {
                 jobDto.setStatus(StatusDto.COMPLETE);
             }
         }

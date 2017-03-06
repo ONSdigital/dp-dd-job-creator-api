@@ -30,7 +30,7 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
         // Given
         UUID id = UUID.randomUUID();
         String s3Url = "some s3 url";
-        DimensionalDataSet dataSet = new DimensionalDataSet();
+        DataSet dataSet = new DataSet();
         dataSet.setId(id);
         dataSet.setS3URL(s3Url);
         entityManager.persist(dataSet);
@@ -59,7 +59,7 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
 
     @Test
     public void shouldReturnSingleDimensionValue() {
-        DimensionalDataSet dataset = new DimensionalDataSet();
+        DataSet dataset = new DataSet();
         dataset.setId(UUID.randomUUID());
         entityManager.persist(dataset);
 
@@ -78,7 +78,7 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
 
     @Test
     public void shouldReturnValuesForAppropriateDimensionOnly() {
-        DimensionalDataSet dataset = new DimensionalDataSet();
+        DataSet dataset = new DataSet();
         dataset.setId(UUID.randomUUID());
         entityManager.persist(dataset);
 
@@ -102,7 +102,7 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
 
     @Test
     public void shouldIgnoreEmptyDimensions() {
-        DimensionalDataSet dataset = new DimensionalDataSet();
+        DataSet dataset = new DataSet();
         dataset.setId(UUID.randomUUID());
         entityManager.persist(dataset);
 
@@ -124,7 +124,7 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
 
     @Test
     public void shouldNotQueryWhenNoDimensionsHaveValues() {
-        DimensionalDataSet dataset = new DimensionalDataSet();
+        DataSet dataset = new DataSet();
         dataset.setId(UUID.randomUUID());
         entityManager.persist(dataset);
 
@@ -143,7 +143,7 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
         assertThat(result).isEmpty();
     }
 
-    private void persistDimensionWithValues(DimensionalDataSet dataset, String dimension1, String... values) {
+    private void persistDimensionWithValues(DataSet dataset, String dimension1, String... values) {
         Dimension d1 = new Dimension();
         d1.setDataSet(dataset);
         d1.setName(dimension1);
