@@ -83,7 +83,7 @@ public class JobDto {
         job.setStatus(StatusDto.convertToModel(this.status));
         job.setExpiryTime(this.expiryTime);
         List<File> files = this.files.stream().map(FileDto::convertToModel).collect(Collectors.toList());
-        job.setFiles(files);
+        job.setFiles(new ArrayList<>(files));
         job.setId(this.id);
         return job;
     }
