@@ -51,6 +51,7 @@ public class JobRepositoryTest extends AbstractInMemoryDatabaseTests {
 
         // When
         jobRepository.deleteJobsExpiringBefore(new Date());
+        entityManager.clear(); // Clear JPA cache to force load from database
 
         // Then
         assertThat(entityManager.find(Job.class, expiredJob.getId())).isNull();
@@ -69,6 +70,7 @@ public class JobRepositoryTest extends AbstractInMemoryDatabaseTests {
 
         // When
         jobRepository.deleteJobsExpiringBefore(new Date());
+        entityManager.clear(); // Clear JPA cache to force load from database
 
         // Then
         // Expired job should have been deleted
