@@ -145,6 +145,7 @@ public class DataSetRepositoryTest extends AbstractInMemoryDatabaseTests {
 
     private void persistDimensionWithValues(DataSet dataset, String dimension1, String... values) {
         Dimension d1 = new Dimension();
+        d1.setId(UUID.randomUUID());
         d1.setDataSet(dataset);
         d1.setName(dimension1);
         d1.setType("foo");

@@ -42,12 +42,12 @@
         <dependency>
             <groupId>com.github.ONSdigital</groupId>
             <artifactId>dp-dd-backend-model</artifactId>
-            <version>1.0.35</version>
+            <version>1.0.36</version>
         </dependency>
         <!--<dependency>-->
             <!--<groupId>uk.co.onsdigital.discovery</groupId>-->
             <!--<artifactId>dd-model</artifactId>-->
-            <!--<version>1.0.35</version>-->
+            <!--<version>1.0.36</version>-->
         <!--</dependency>-->
         <dependency>
             <groupId>com.github.ONSdigital</groupId>
