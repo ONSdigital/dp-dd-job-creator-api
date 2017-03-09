@@ -12,7 +12,7 @@ import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import uk.co.onsdigital.job.model.FileFormat;
-import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.FileDto;
 import uk.co.onsdigital.job.model.StatusDto;
 import uk.co.onsdigital.logging.RequestIdProvider;
 
@@ -69,7 +69,7 @@ public class FilterServiceClientTest {
                 .put("first", ImmutableSortedSet.of("a", "b"))
                 .put("second", ImmutableSortedSet.of("c", "d"))
                 .build();
-        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, new FileStatusDto("test.csv"));
+        Map<FileFormat, FileDto> files = Collections.singletonMap(FileFormat.CSV, new FileDto("test.csv"));
 
         // When
         filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, filters);
@@ -91,10 +91,10 @@ public class FilterServiceClientTest {
     @Test
     public void shouldNotSubmitFilesThatAreComplete() {
         // Given
-        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
-        fileStatusDto.setSubmittedAt(new Date());
-        fileStatusDto.setStatus(StatusDto.COMPLETE);
-        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, fileStatusDto);
+        FileDto fileDto = new FileDto("test.csv");
+        fileDto.setSubmittedAt(new Date());
+        fileDto.setStatus(StatusDto.COMPLETE);
+        Map<FileFormat, FileDto> files = Collections.singletonMap(FileFormat.CSV, fileDto);
 
         // When
         filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, Collections.emptyMap());
@@ -106,9 +106,9 @@ public class FilterServiceClientTest {
     @Test
     public void shouldNotSubmitFilesThatHaveRecentlyBeenSubmitted() {
         // Given
-        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
-        fileStatusDto.setSubmittedAt(new Date());
-        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, fileStatusDto);
+        FileDto fileDto = new FileDto("test.csv");
+        fileDto.setSubmittedAt(new Date());
+        Map<FileFormat, FileDto> files = Collections.singletonMap(FileFormat.CSV, fileDto);
 
         // When
         filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, Collections.emptyMap());
@@ -120,9 +120,9 @@ public class FilterServiceClientTest {
     @Test
     public void shouldResubmitFilesThatHaveTimedOut() {
         // Given
-        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
-        fileStatusDto.setSubmittedAt(Date.from(Instant.now().minus(1, ChronoUnit.HOURS).minus(1, ChronoUnit.SECONDS)));
-        Map<FileFormat, FileStatusDto> files = Collections.singletonMap(FileFormat.CSV, fileStatusDto);
+        FileDto fileDto = new FileDto("test.csv");
+        fileDto.setSubmittedAt(Date.from(Instant.now().minus(1, ChronoUnit.HOURS).minus(1, ChronoUnit.SECONDS)));
+        Map<FileFormat, FileDto> files = Collections.singletonMap(FileFormat.CSV, fileDto);
 
         // When
         filterServiceClient.submitFilterRequest(INPUT_S3_URL, files, Collections.emptyMap());

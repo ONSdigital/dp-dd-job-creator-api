@@ -36,7 +36,7 @@ public class JobControllerTest {
     private JobStatusChecker mockJobStatusChecker;
 
     @Captor
-    private ArgumentCaptor<Map<FileFormat, FileStatusDto>> fileStatus;
+    private ArgumentCaptor<Map<FileFormat, FileDto>> fileStatus;
 
     private long pendingJobLimit = 99;
 
@@ -94,7 +94,7 @@ public class JobControllerTest {
     public void shouldCreatePendingInitialFileStatus() throws Exception {
         CreateJobRequest request = request(UUID.randomUUID());
 
-        Map<FileFormat, FileStatusDto> result = jobController.getInitialFileStatus(request);
+        Map<FileFormat, FileDto> result = jobController.getInitialFileStatus(request);
 
         assertThat(result).containsOnlyKeys(FileFormat.CSV);
         assertThat(result.get(FileFormat.CSV).getStatus()).isEqualTo(PENDING);
@@ -221,8 +221,8 @@ public class JobControllerTest {
     @Test
     public void shouldCheckStatusForJobsThatArePending() throws Exception {
         String jobId = "job1";
-        List<FileStatusDto> files = new LinkedList<FileStatusDto>();
-        FileStatusDto file = new FileStatusDto("test.csv");
+        List<FileDto> files = new LinkedList<FileDto>();
+        FileDto file = new FileDto("test.csv");
         files.add(file);
         JobDto jobDto = new JobDto();
         jobDto.setId(jobId);

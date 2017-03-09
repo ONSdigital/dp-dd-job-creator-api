@@ -20,7 +20,7 @@ public class JobDto {
 
     private StatusDto status = StatusDto.PENDING;
 
-    private  List<FileStatusDto> files = Collections.emptyList();
+    private  List<FileDto> files = Collections.emptyList();
 
     @JsonIgnore
     private Date expiryTime;
@@ -29,11 +29,11 @@ public class JobDto {
 
     }
 
-    public JobDto(Collection<FileStatusDto> files, Date expiryTime) {
+    public JobDto(Collection<FileDto> files, Date expiryTime) {
         this(UUID.randomUUID().toString(), StatusDto.PENDING, new ArrayList<>(files), expiryTime);
     }
 
-    private JobDto(String id, StatusDto status, List<FileStatusDto> files, Date expiryTime) {
+    private JobDto(String id, StatusDto status, List<FileDto> files, Date expiryTime) {
         this.id = id;
         this.status = status;
         this.files = files;
@@ -54,11 +54,11 @@ public class JobDto {
         this.id = id;
     }
 
-    public List<FileStatusDto> getFiles() {
+    public List<FileDto> getFiles() {
         return files;
     }
 
-    public void setFiles(List<FileStatusDto> files) {
+    public void setFiles(List<FileDto> files) {
         this.files = files;
     }
 
@@ -82,8 +82,8 @@ public class JobDto {
         Job job = new Job();
         job.setStatus(StatusDto.convertToModel(this.status));
         job.setExpiryTime(this.expiryTime);
-        List<FileStatus> fileStatuses = this.files.stream().map(FileStatusDto::convertToModel).collect(Collectors.toList());
-        job.setFiles(fileStatuses);
+        List<File> files = this.files.stream().map(FileDto::convertToModel).collect(Collectors.toList());
+        job.setFiles(new ArrayList<>(files));
         job.setId(this.id);
         return job;
     }
@@ -93,7 +93,7 @@ public class JobDto {
         jobDto.setStatus(StatusDto.valueOf(job.getStatus().toString()));
         jobDto.setExpiryTime(job.getExpiryTime());
         jobDto.setId(job.getId());
-        jobDto.setFiles(job.getFiles().stream().map(FileStatusDto::convertFromModel).collect(Collectors.toList()));
+        jobDto.setFiles(job.getFiles().stream().map(FileDto::convertFromModel).collect(Collectors.toList()));
         return jobDto;
     }
 

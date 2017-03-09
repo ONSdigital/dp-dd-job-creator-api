@@ -1,9 +1,8 @@
 package uk.co.onsdigital.job.persistence;
 
 import com.google.common.collect.ImmutableMap;
-import org.eclipse.persistence.config.EntityManagerProperties;
-import org.eclipse.persistence.config.PersistenceUnitProperties;
-import org.eclipse.persistence.platform.database.H2Platform;
+import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.dialect.H2Dialect;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -40,13 +39,12 @@ public abstract class AbstractInMemoryDatabaseTests {
 
     private static EntityManagerFactory getInMemoryEntityManagerFactory() {
         Map<String, String> props = ImmutableMap.<String, String>builder()
-                .put(EntityManagerProperties.JDBC_URL, "jdbc:h2:mem:test")
-                .put(EntityManagerProperties.JDBC_USER, "SA")
-                .put(EntityManagerProperties.JDBC_PASSWORD, "")
-                .put(EntityManagerProperties.JDBC_DRIVER, "org.h2.Driver")
-                .put(PersistenceUnitProperties.DDL_GENERATION, PersistenceUnitProperties.DROP_AND_CREATE)
-                .put(PersistenceUnitProperties.DDL_GENERATION_MODE, PersistenceUnitProperties.DDL_DATABASE_GENERATION)
-                .put(PersistenceUnitProperties.TARGET_DATABASE, H2Platform.class.getName())
+                .put(AvailableSettings.JPA_JDBC_URL, "jdbc:h2:mem:test")
+                .put(AvailableSettings.JPA_JDBC_USER, "SA")
+                .put(AvailableSettings.JPA_JDBC_PASSWORD, "")
+                .put(AvailableSettings.JPA_JDBC_DRIVER, "org.h2.Driver")
+                .put(AvailableSettings.HBM2DDL_AUTO, "create-drop")
+                .put(AvailableSettings.DIALECT, H2Dialect.class.getName())
                 .build();
 
         return Persistence.createEntityManagerFactory("data_discovery", props);
