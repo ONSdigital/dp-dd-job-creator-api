@@ -6,7 +6,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.web.util.UriTemplate;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import uk.co.onsdigital.job.model.FileStatusDto;
+import uk.co.onsdigital.job.model.FileDto;
 import uk.co.onsdigital.job.model.JobDto;
 import uk.co.onsdigital.job.model.StatusDto;
 
@@ -45,24 +45,24 @@ public class JobDtoStatusCheckerTest {
 
     @Test
     public void shouldLeaveJobPendingIfFilesNotAvailable() {
-        FileStatusDto fileStatusDto = new FileStatusDto("test.csv");
+        FileDto fileDto = new FileDto("test.csv");
         JobDto jobDto = new JobDto();
         jobDto.setId("x");
-        jobDto.setFiles(Collections.singletonList(fileStatusDto));
+        jobDto.setFiles(Collections.singletonList(fileDto));
         jobDto.setStatus(StatusDto.PENDING);
         jobDto.setExpiryTime(now());
 
         checker.updateStatus(jobDto);
 
         verify(mockS3Client).doesObjectExist(BUCKET, "test.csv");
-        assertThat(fileStatusDto.isComplete()).isFalse();
+        assertThat(fileDto.isComplete()).isFalse();
         assertThat(jobDto.isComplete()).isFalse();
     }
 
     @Test
     public void shouldMarkFileAsCompleteWhenAvailable() {
-        FileStatusDto a = new FileStatusDto("a.csv");
-        FileStatusDto b = new FileStatusDto("b.csv");
+        FileDto a = new FileDto("a.csv");
+        FileDto b = new FileDto("b.csv");
         JobDto jobDto = new JobDto();
         jobDto.setId("x");
         jobDto.setFiles(Arrays.asList(a, b));
@@ -81,8 +81,8 @@ public class JobDtoStatusCheckerTest {
 
     @Test
     public void shouldMarkJobAsCompleteWhenAllFilesAvailable() {
-        FileStatusDto a = new FileStatusDto("a.csv");
-        FileStatusDto b = new FileStatusDto("b.csv");
+        FileDto a = new FileDto("a.csv");
+        FileDto b = new FileDto("b.csv");
         JobDto jobDto = new JobDto();
         jobDto.setId("x");
         jobDto.setFiles(Arrays.asList(a, b));

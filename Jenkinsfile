@@ -11,7 +11,7 @@ node {
     def revision = revisionFrom(readFile('git-tag').trim(), readFile('git-commit').trim())
 
     stage('Build') {
-        sh "${tool 'm3'}/bin/mvn clean package"
+        sh "${tool 'm3'}/bin/mvn -U clean package"
     }
 
     stage('Image') {
